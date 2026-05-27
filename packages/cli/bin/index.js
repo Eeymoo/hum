@@ -9,13 +9,21 @@ import weight from '../src/commands/weight.js'
 import exercise from '../src/commands/exercise.js'
 import diet from '../src/commands/diet.js'
 import sleep from '../src/commands/sleep.js'
+import { checkVersion, getCliVersion } from '../src/lib/version-check.js'
 
 const program = new Command()
 
 program
   .name('hum')
   .description('Health tracking CLI')
-  .version('0.1.0')
+  .version(getCliVersion())
+
+program.hook('preAction', async (thisCommand) => {
+  const commandName = thisCommand.name()
+  if (commandName !== 'auth') {
+    await checkVersion()
+  }
+})
 
 program.addCommand(auth)
 program.addCommand(config)

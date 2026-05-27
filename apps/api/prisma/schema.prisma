@@ -7,35 +7,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String    @id @default(uuid())
+  email         String?   @unique
+  name          String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  apiKeys       ApiKey[]
+  records       Record[]
+  weights       Weight[]
+  exercises     Exercise[]
+  diets         Diet[]
+  sleeps        Sleep[]
+  deleteAt      Int       @default(0)
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String?
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deleteAt          Int     @default(0)
+
+  @@map("accounts")
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  key       String    @unique
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deleteAt  Int       @default(0)
+
+  @@map("api_keys")
+}
+
 model Record {
-  id          String   @id @default(uuid())
-  type        String
-  data        String
-  tags        String
-  note        String?
-  attachments String
-  date        DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deleteAt    Int      @default(0)
+  id           String   @id @default(uuid())
+  userId       String?
+  type         String
+  data         String
+  tags         String?
+  note         String?
+  attachments  String?
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deleteAt     Int      @default(0)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([type, date])
   @@index([createdAt])
   @@map("records")
 }
 
-model ApiKey {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  name      String?
-  lastUsed  DateTime?
-  createdAt DateTime @default(now())
-  deleteAt  Int      @default(0)
-  @@map("api_keys")
+model Weight {
+  id          String   @id @default(uuid())
+  userId      String?
+  weight      Float
+  bodyFat     Float?
+  muscleMass  Float?
+  bmi         Float?
+  water       Float?
+  boneMass    Float?
+  visceralFat Int?
+  note        String?
+  attachments String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@map("weights")
 }
 
 model Exercise {
   id             String   @id @default(uuid())
+  userId         String?
   type           String
   duration       Int
   caloriesBurned Int?
@@ -50,6 +112,7 @@ model Exercise {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deleteAt       Int      @default(0)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@index([type, date])
@@ -58,6 +121,7 @@ model Exercise {
 
 model Diet {
   id          String   @id @default(uuid())
+  userId      String?
   mealType    String
   calories    Int?
   protein     Float?
@@ -73,6 +137,7 @@ model Diet {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@map("diets")
@@ -80,6 +145,7 @@ model Diet {
 
 model Sleep {
   id          String   @id @default(uuid())
+  userId      String?
   duration    Float
   bedTime     String
   wakeTime    String
@@ -94,27 +160,8 @@ model Sleep {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@map("sleeps")
-}
-
-model Weight {
-  id          String   @id @default(uuid())
-  weight      Float
-  bodyFat     Float?
-  muscleMass  Float?
-  bmi         Float?
-  water       Float?
-  boneMass    Float?
-  visceralFat Int?
-  note        String?
-  attachments String?
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deleteAt    Int      @default(0)
-
-  @@index([date])
-  @@map("weights")
 }

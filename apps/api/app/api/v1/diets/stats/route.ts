@@ -29,15 +29,36 @@ export async function GET(request: NextRequest) {
 
     const diets = await prisma.diet.findMany({ where })
 
+    if (diets.length === 0) {
+      return NextResponse.json({
+        avgCaloriesPerDay: null,
+        avgProtein: null,
+        avgCarbs: null,
+        avgFat: null,
+        totalWater: null,
+        count: 0
+      })
+    }
+
+    const daysInRange = (() => {
+      const s = startDate || diets.reduce((min, d) => d.date < min ? d.date : min, diets[0].date)
+      const e = endDate || new Date()
+      const diff = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)))
+      return diff
+    })()
+
     let totalCalories = 0
     let totalProtein = 0
     let totalCarbs = 0
     let totalFat = 0
     let totalWater = 0
-    let count = 0
+    let hasCaloriesCount = 0
 
     diets.forEach(d => {
-      if (d.calories !== null) { totalCalories += d.calories; count++ }
+      if (d.calories !== null) {
+        totalCalories += d.calories
+        hasCaloriesCount++
+      }
       if (d.protein !== null) totalProtein += d.protein
       if (d.carbs !== null) totalCarbs += d.carbs
       if (d.fat !== null) totalFat += d.fat
@@ -45,12 +66,12 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      avgCaloriesPerDay: count > 0 ? totalCalories / count : null,
-      avgProtein: count > 0 ? totalProtein / count : null,
-      avgCarbs: count > 0 ? totalCarbs / count : null,
-      avgFat: count > 0 ? totalFat / count : null,
+      avgCaloriesPerDay: hasCaloriesCount > 0 ? totalCalories / daysInRange : null,
+      avgProtein: diets.length > 0 ? totalProtein / daysInRange : null,
+      avgCarbs: diets.length > 0 ? totalCarbs / daysInRange : null,
+      avgFat: diets.length > 0 ? totalFat / daysInRange : null,
       totalWater,
-      count
+      count: diets.length
     })
   } catch (error) {
     console.error('Diets stats GET error:', error)

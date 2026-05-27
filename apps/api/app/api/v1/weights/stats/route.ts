@@ -50,12 +50,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       trend: weights.map(w => ({
-        date: w.date.toISOString(),
-        weight: w.weight })),
-      avgWeight,
-      minWeight,
-      maxWeight,
-      change
+        date: w.date.toISOString().split('T')[0],
+        weight: w.weight,
+        bodyFat: w.bodyFat
+      })),
+      avgWeight: Math.round(avgWeight * 10) / 10,
+      minWeight: Math.round(minWeight * 10) / 10,
+      maxWeight: Math.round(maxWeight * 10) / 10,
+      change: change !== null ? Math.round(change * 10) / 10 : null
     })
   } catch (error) {
     console.error('Weights stats GET error:', error)
