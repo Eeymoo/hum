@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LineChart } from '@tremor/react'
+import ReactECharts from 'react-echarts-library'
 
 interface WeightRecord {
   id: string
@@ -174,13 +174,19 @@ export default function WeightPage() {
       {chartData.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-medium mb-4">Weight Trend (30 days)</h2>
-          <LineChart
-            className="h-64"
-            data={chartData}
-            index="date"
-            categories={['Weight']}
-            colors={['indigo']}
-            valueFormatter={(value) => `${value} kg`}
+          <ReactECharts
+            option={{
+              tooltip: { trigger: 'axis', formatter: '{b}: {c} kg' },
+              color: ['#6366f1'],
+              xAxis: { type: 'category', data: chartData.map(d => d.date) },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'line',
+                name: 'Weight',
+                data: chartData.map(d => d.Weight)
+              }]
+            }}
+            style={{ height: 256 }}
           />
         </div>
       )}

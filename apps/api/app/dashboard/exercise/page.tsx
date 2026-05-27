@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BarChart } from '@tremor/react'
+import ReactECharts from 'react-echarts-library'
 
 interface ExerciseRecord {
   id: string
@@ -209,13 +209,18 @@ export default function ExercisePage() {
       {chartData.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-medium mb-4">Exercise Frequency by Type (30 days)</h2>
-          <BarChart
-            className="h-64"
-            data={chartData}
-            index="type"
-            categories={['sessions']}
-            colors={['indigo']}
-            valueFormatter={(value) => `${value} sessions`}
+          <ReactECharts
+            option={{
+              tooltip: { trigger: 'axis', formatter: '{b}: {c} sessions' },
+              color: ['#6366f1'],
+              xAxis: { type: 'category', data: chartData.map(d => d.type) },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'bar',
+                data: chartData.map(d => d.sessions)
+              }]
+            }}
+            style={{ height: 256 }}
           />
         </div>
       )}

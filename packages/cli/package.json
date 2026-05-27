@@ -1,5 +1,5 @@
 {
-  "name": "@hum/cli",
+  "name": "@eeymoo/hum",
   "version": "0.1.0",
   "bin": {
     "hum": "./bin/index.js"

@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
 import { randomUUID } from 'crypto'
-import { cookies } from 'next/headers'
-
-const accessTokens = new Map<string, {
-  token: string
-  userId: string
-  expiresAt: number
-}>()
+import { storeAccessToken } from '@/lib/device-auth'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { deviceCode, userCode } = body
+    const { deviceCode } = body
 
     if (!deviceCode) {
       return NextResponse.json({
@@ -20,9 +13,6 @@ export async function POST(request: NextRequest) {
         error_description: 'device_code is required'
       }, { status: 400 })
     }
-
-    const now = Date.now()
-    const codeData = (await import('@/app/api/v1/auth/device/route')).deviceCodes?.get(deviceCode)
 
     const deviceCodes = (global as any).__deviceCodes
     const code = deviceCodes?.get(deviceCode)
@@ -50,13 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (code.status === 'approved' && code.userId) {
       const token = randomUUID()
-      const expiresAt = now + 3600000
-
-      accessTokens.set(token, {
-        token,
-        userId: code.userId,
-        expiresAt
-      })
+      storeAccessToken(token, code.userId)
 
       deviceCodes.delete(deviceCode)
 
@@ -78,14 +62,4 @@ export async function POST(request: NextRequest) {
       error_description: 'Internal server error'
     }, { status: 500 })
   }
-}
-
-export function validateAccessToken(token: string) {
-  const data = accessTokens.get(token)
-  if (!data) return null
-  if (Date.now() > data.expiresAt) {
-    accessTokens.delete(token)
-    return null
-  }
-  return data.userId
 }

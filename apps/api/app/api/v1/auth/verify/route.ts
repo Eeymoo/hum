@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false }, { status: 400 })
     }
 
-    const key = await prisma.apiKey.findUnique({ where: { key: apiKey } })
+    const key = await prisma.apiKey.findUnique({
+      where: { key: apiKey },
+      include: { user: true }
+    })
 
     if (!key) {
       return NextResponse.json({ valid: false }, { status: 401 })
@@ -21,7 +24,11 @@ export async function POST(request: NextRequest) {
       data: { lastUsed: new Date() }
     })
 
-    return NextResponse.json({ valid: true, name: key.name })
+    return NextResponse.json({
+      valid: true,
+      user: key.user.name || key.user.email || 'Unknown',
+      keyName: key.name
+    })
   } catch (error) {
     console.error('Auth verify error:', error)
     return NextResponse.json({ valid: false }, { status: 500 })

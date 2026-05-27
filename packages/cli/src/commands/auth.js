@@ -48,7 +48,10 @@ auth
 
         if (result.valid) {
           config.set('apiKey', options.apiKey)
-          console.log('Successfully logged in' + (result.name ? ` as ${result.name}` : '') + '!')
+          const parts = []
+          if (result.user) parts.push(result.user)
+          if (result.keyName) parts.push(`key: ${result.keyName}`)
+          console.log('Successfully logged in' + (parts.length ? ` as ${parts.join(' / ')}` : '') + '!')
         } else {
           console.error('Invalid API key')
         }

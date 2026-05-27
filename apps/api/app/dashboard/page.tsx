@@ -1,5 +1,6 @@
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
+import { redirect } from 'next/navigation'
 
 async function getTodayData(userId: string) {
   const today = new Date()
@@ -43,7 +44,7 @@ async function getTodayData(userId: string) {
 export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user?.id) {
-    return null
+    redirect('/login')
   }
 
   const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(session.user.id)

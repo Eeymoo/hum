@@ -1,4 +1,4 @@
-export function parseDateRange(last?: string, start?: string, end?: string) {
+export function parseDateRange(last?: string | null, start?: string | null, end?: string | null) {
   let startDate: Date | undefined
   let endDate: Date | undefined
 
@@ -42,7 +42,7 @@ export function parseDateRange(last?: string, start?: string, end?: string) {
   return { startDate, endDate }
 }
 
-export function parseActivities(activitiesStr: string): any[] {
+export function parseActivities(activitiesStr: string | null): any[] {
   if (!activitiesStr) return []
   return activitiesStr.split(';').map(part => {
     const [namePart, ...restParts] = part.split(':')
@@ -65,7 +65,7 @@ export function parseActivities(activitiesStr: string): any[] {
   })
 }
 
-export function parseFoods(foodsStr: string): any[] {
+export function parseFoods(foodsStr: string | null): any[] {
   if (!foodsStr) return []
   return foodsStr.split(',').map(part => {
     const [name, amount] = part.split(':')

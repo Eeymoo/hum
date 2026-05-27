@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BarChart } from '@tremor/react'
+import ReactECharts from 'react-echarts-library'
 
 interface SleepRecord {
   id: string
@@ -212,13 +212,19 @@ export default function SleepPage() {
       {chartData.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-medium mb-4">Sleep Duration & Quality (Last 7 Days)</h2>
-          <BarChart
-            className="h-64"
-            data={chartData}
-            index="date"
-            categories={['Duration', 'Quality']}
-            colors={['indigo', 'rose']}
-            valueFormatter={(value, category) => category === 'Quality' ? `${value}/10` : `${value}h`}
+          <ReactECharts
+            option={{
+              tooltip: { trigger: 'axis' },
+              color: ['#6366f1', '#f43f5e'],
+              legend: { data: ['Duration', 'Quality'] },
+              xAxis: { type: 'category', data: chartData.map(d => d.date) },
+              yAxis: { type: 'value' },
+              series: [
+                { type: 'bar', name: 'Duration', data: chartData.map(d => d.Duration) },
+                { type: 'bar', name: 'Quality', data: chartData.map(d => d.Quality) }
+              ]
+            }}
+            style={{ height: 256 }}
           />
         </div>
       )}

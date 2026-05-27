@@ -18,7 +18,8 @@ export function serializeArray(arr: any[]): string {
   return JSON.stringify(arr)
 }
 
-export function deserializeRecordData(str: string): any {
+export function deserializeRecordData(str: string | null): any {
+  if (!str) return null
   try {
     return JSON.parse(str)
   } catch {
@@ -26,7 +27,8 @@ export function deserializeRecordData(str: string): any {
   }
 }
 
-export function deserializeArray(str: string): any[] {
+export function deserializeArray(str: string | null): any[] {
+  if (!str) return []
   try {
     return JSON.parse(str)
   } catch {

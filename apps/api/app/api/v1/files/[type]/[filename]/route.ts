@@ -6,15 +6,15 @@ import path from 'path'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { type: string; filename: string } }
+  { params }: { params: Promise<{ type: string; filename: string }> }
 ) {
+  const { type, filename } = await params
   const authResult = await verifyApiKey(request.headers.get('authorization'))
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { type, filename } = params
     const allowedTypes = ['weights', 'exercises', 'diets', 'sleeps']
     if (!allowedTypes.includes(type)) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
-import { verifyApiKey } from '@/lib/auth'
+import { verifyAuth } from '@/lib/auth'
 import { saveFile, validateFile, deleteFile } from '@/lib/file'
 
 function deserializeWeight(weight: any) {
@@ -12,16 +12,17 @@ function deserializeWeight(weight: any) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  const { id } = await params
+  const authResult = await verifyAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const weight = await prisma.weight.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     if (!weight || weight.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -35,16 +36,17 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  const { id } = await params
+  const authResult = await verifyAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const existing = await prisma.weight.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -85,7 +87,7 @@ export async function PATCH(
     data.attachments = serializeArray(newAttachments)
 
     const updated = await prisma.weight.update({
-      where: { id: params.id },
+      where: { id },
       data
     })
     return NextResponse.json(deserializeWeight(updated))
@@ -97,16 +99,17 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  const { id } = await params
+  const authResult = await verifyAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const existing = await prisma.weight.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -118,7 +121,7 @@ export async function DELETE(
     }
 
     await prisma.weight.update({
-      where: { id: params.id },
+      where: { id },
       data: { deleteAt: Date.now() }
     })
     return NextResponse.json({ success: true })

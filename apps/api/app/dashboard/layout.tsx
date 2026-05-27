@@ -43,9 +43,15 @@ export default async function DashboardLayout({
                 <Link href="/dashboard/timeline" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
                   Timeline
                 </Link>
+                <Link href="/dashboard/records" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                  Records
+                </Link>
               </div>
             </div>
             <div className="flex items-center">
+              <Link href="/dashboard/api-keys" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                API Keys
+              </Link>
               <Link href="/settings" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Settings
               </Link>

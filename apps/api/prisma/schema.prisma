@@ -35,6 +35,7 @@ model Account {
   access_token      String?
   refresh_token     String?
   expires_at        Int?
+  password          String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   deleteAt          Int     @default(0)
 

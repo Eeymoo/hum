@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
-import { verifyApiKey } from '@/lib/auth'
+import { verifyAuth } from '@/lib/auth'
 import { saveFile, validateFile, deleteFile } from '@/lib/file'
 import { parseDateRange, parseActivities } from '@/lib/utils'
 
@@ -13,7 +13,7 @@ function deserializeExercise(exercise: any) {
 }
 
 export async function GET(request: NextRequest) {
-  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  const authResult = await verifyAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  const authResult = await verifyAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { DonutChart } from '@tremor/react'
+import ReactECharts from 'react-echarts-library'
 
 interface DietRecord {
   id: string
@@ -224,13 +224,18 @@ export default function DietPage() {
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium mb-4">Macro Distribution (Avg per day)</h2>
-            <DonutChart
-              className="h-64"
-              data={macroChartData}
-              category="value"
-              index="name"
-              colors={['indigo', 'rose', 'amber']}
-              valueFormatter={(value) => `${value.toFixed(1)}g`}
+            <ReactECharts
+              option={{
+                tooltip: { trigger: 'item', formatter: '{b}: {c}g ({d}%)' },
+                color: ['#6366f1', '#f43f5e', '#f59e0b'],
+                series: [{
+                  type: 'pie',
+                  radius: ['40%', '70%'],
+                  data: macroChartData,
+                  label: { formatter: '{b}: {c}g' }
+                }]
+              }}
+              style={{ height: 256 }}
             />
           </div>
           <div className="bg-white shadow rounded-lg p-6">
