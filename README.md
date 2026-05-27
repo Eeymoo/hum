@@ -235,6 +235,39 @@ sqlite3 prisma/dev.db "SELECT * FROM api_keys;"
 ### Q: 如何修改 API 端口？
 A: 使用 `hum config set apiUrl http://localhost:新端口`
 
+## Skills（技能扩展）
+
+Hum CLI 支持通过 [skills](https://github.com/vercel-labs/skills) 生态系统安装扩展技能，获得渐进式披露的使用指南。
+
+### 安装 Skills
+
+```bash
+# 安装所有技能
+npx skills add eeymoo/hum/skills
+
+# 查看可用技能
+npx skills add eeymoo/hum/skills --list
+
+# 安装特定技能
+npx skills add eeymoo/hum/skills --skill hum-cli-guide
+```
+
+### 可用技能
+
+| 技能 | 说明 | 适用场景 |
+|------|------|----------|
+| `hum-cli-guide` | CLI 使用指南 | 使用 Hum CLI |
+
+### 关于 Agent Skills
+
+本项目使用 [Agent Skills](https://agentskills.io) 开放标准。Skill 通过渐进式披露机制工作：
+
+1. **Discovery**: Agent 启动时只加载 skill 名称和描述
+2. **Activation**: 当任务匹配时，加载完整 `SKILL.md` 指令
+3. **Execution**: 执行时按需加载脚本和资源
+
+这种机制让 Agent 可以同时持有大量 skill，而上下文占用很小。
+
 ## 路线图
 
 - [x] MVP1: 基础记录 CRUD + CLI
