@@ -1,6 +1,6 @@
 {
   "name": "@eeymoo/hum",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Hum CLI - A command line tool for Hum API",
   "repository": {
     "type": "git",
