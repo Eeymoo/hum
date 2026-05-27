@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Record {
+  id          String   @id @default(uuid())
+  type        String
+  data        String
+  tags        String
+  note        String?
+  attachments String
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deleteAt    Int      @default(0)
+
+  @@index([type, date])
+  @@index([createdAt])
+  @@map("records")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String?
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+  deleteAt  Int      @default(0)
+  @@map("api_keys")
+}
+
+model Exercise {
+  id             String   @id @default(uuid())
+  type           String
+  duration       Int
+  caloriesBurned Int?
+  activities     String
+  heartRateAvg   Int?
+  heartRateMax   Int?
+  feeling        Int?
+  location       String?
+  note           String?
+  attachments    String?
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deleteAt       Int      @default(0)
+
+  @@index([date])
+  @@index([type, date])
+  @@map("exercises")
+}
+
+model Diet {
+  id          String   @id @default(uuid())
+  mealType    String
+  calories    Int?
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  fiber       Float?
+  sodium      Float?
+  foods       String
+  water       Int?
+  note        String?
+  attachments String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deleteAt    Int      @default(0)
+
+  @@index([date])
+  @@map("diets")
+}
+
+model Sleep {
+  id          String   @id @default(uuid())
+  duration    Float
+  bedTime     String
+  wakeTime    String
+  quality     Int
+  deepSleep   Float?
+  remSleep    Float?
+  awakenings  Int?
+  feeling     Int?
+  note        String?
+  attachments String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deleteAt    Int      @default(0)
+
+  @@index([date])
+  @@map("sleeps")
+}
+
+model Weight {
+  id          String   @id @default(uuid())
+  weight      Float
+  bodyFat     Float?
+  muscleMass  Float?
+  bmi         Float?
+  water       Float?
+  boneMass    Float?
+  visceralFat Int?
+  note        String?
+  attachments String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deleteAt    Int      @default(0)
+
+  @@index([date])
+  @@map("weights")
+}

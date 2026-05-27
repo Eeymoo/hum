@@ -1,0 +1,101 @@
+import { NextRequest, NextResponse } from 'next/server'
+import prisma, { serializeRecordData, serializeArray, deserializeRecord } from '@/lib/prisma'
+import { verifyApiKey } from '@/lib/auth'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  if (!authResult) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const searchParams = request.nextUrl.searchParams
+    const includeDeleted = searchParams.get('includeDeleted') === 'true'
+
+    const where: any = { id }
+    if (!includeDeleted) {
+      where.deleteAt = 0
+    }
+
+    const record = await prisma.record.findFirst({ where })
+
+    if (!record) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(deserializeRecord(record))
+  } catch (error) {
+    console.error('Record GET error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  if (!authResult) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const body = await request.json()
+    const { data, tags, note, attachments, date } = body
+
+    const updateData: any = {}
+    if (data !== undefined) {
+      updateData.data = serializeRecordData(data)
+    }
+    if (tags !== undefined) {
+      updateData.tags = serializeArray(tags)
+    }
+    if (note !== undefined) {
+      updateData.note = note
+    }
+    if (attachments !== undefined) {
+      updateData.attachments = serializeArray(attachments)
+    }
+    if (date !== undefined) {
+      updateData.date = new Date(date)
+    }
+
+    const record = await prisma.record.update({
+      where: { id },
+      data: updateData
+    })
+
+    return NextResponse.json(deserializeRecord(record))
+  } catch (error) {
+    console.error('Record PATCH error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await verifyApiKey(request.headers.get('authorization'))
+  if (!authResult) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    await prisma.record.update({
+      where: { id },
+      data: { deleteAt: Date.now() }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Record DELETE error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

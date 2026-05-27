@@ -1,0 +1,19 @@
+{
+  "name": "@hum/cli",
+  "version": "0.1.0",
+  "bin": {
+    "hum": "./bin/index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "conf": "^13.0.1",
+    "node-fetch": "^3.3.2"
+  },
+  "scripts": {
+    "test:e2e": "bash test/e2e.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
