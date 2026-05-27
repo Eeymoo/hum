@@ -1,10 +1,10 @@
 {
   "name": "@eeymoo/hum",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hum CLI - A command line tool for Hum API",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Eeymoo/hum.git",
+    "url": "git+https://github.com/Eeymoo/hum.git",
     "directory": "packages/cli"
   },
   "bugs": {
