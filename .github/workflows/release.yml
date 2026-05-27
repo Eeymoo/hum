@@ -12,19 +12,17 @@ jobs:
       version: ${{ steps.version.outputs.VERSION }}
       api_version: ${{ steps.api_version.outputs.VERSION }}
       cli_version: ${{ steps.cli_version.outputs.VERSION }}
+      owner_lower: ${{ steps.owner.outputs.LOWER }}
     steps:
       - uses: actions/checkout@v4
+      - id: owner
+        run: echo "LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
       - id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
       - id: api_version
         run: echo "VERSION=$(node -e "console.log(require('./apps/api/package.json').version)")" >> $GITHUB_OUTPUT
       - id: cli_version
         run: echo "VERSION=$(node -e "console.log(require('./packages/cli/package.json').version)")" >> $GITHUB_OUTPUT
-      - name: Check versions
-        run: |
-          echo "Target: ${{ steps.version.outputs.VERSION }}"
-          echo "API: ${{ steps.api_version.outputs.VERSION }}"
-          echo "CLI: ${{ steps.cli_version.outputs.VERSION }}"
       - name: Sync API version
         if: steps.api_version.outputs.VERSION != steps.version.outputs.VERSION
         working-directory: ./apps/api
@@ -79,7 +77,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ github.repository_owner }}/hum-api:v${{ needs.version-sync.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/hum-api:latest
+            ghcr.io/${{ needs.version-sync.outputs.owner_lower }}/hum-api:v${{ needs.version-sync.outputs.version }}
+            ghcr.io/${{ needs.version-sync.outputs.owner_lower }}/hum-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
