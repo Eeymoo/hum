@@ -1,6 +1,6 @@
 ---
 name: hum-cli-guide
-description: Guide for using the Hum health tracking CLI
+description: Use this skill when the user wants to log, query, update, or manage personal health data (weight, exercise, sleep, diet) via the Hum health-tracking CLI, including authentication setup with API keys or device flow, searching/filtering records, and troubleshooting API errors — even if they don't explicitly mention "Hum" or "CLI".
 ---
 
 # Hum CLI Guide
