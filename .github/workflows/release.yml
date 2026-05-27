@@ -10,29 +10,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
+      api_version: ${{ steps.api_version.outputs.VERSION }}
+      cli_version: ${{ steps.cli_version.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v4
       - id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-      - name: Check version
-        id: check_version
+      - id: api_version
+        run: echo "VERSION=$(node -e "console.log(require('./apps/api/package.json').version)")" >> $GITHUB_OUTPUT
+      - id: cli_version
+        run: echo "VERSION=$(node -e "console.log(require('./packages/cli/package.json').version)")" >> $GITHUB_OUTPUT
+      - name: Check versions
         run: |
-          API_VERSION=$(node -p "require('./apps/api/package.json').version")
-          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
-          echo "Current API version: $API_VERSION"
-          echo "Current CLI version: $CLI_VERSION"
-          echo "Target version: ${{ steps.version.outputs.VERSION }}"
-          if [ "$API_VERSION" != "${{ steps.version.outputs.VERSION }}" ] || [ "$CLI_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
-            echo "needs_update=true" >> $GITHUB_OUTPUT
-          else
-            echo "needs_update=false" >> $GITHUB_OUTPUT
-          fi
+          echo "Target: ${{ steps.version.outputs.VERSION }}"
+          echo "API: ${{ steps.api_version.outputs.VERSION }}"
+          echo "CLI: ${{ steps.cli_version.outputs.VERSION }}"
       - name: Sync API version
-        if: steps.check_version.outputs.needs_update == 'true'
+        if: steps.api_version.outputs.VERSION != steps.version.outputs.VERSION
         working-directory: ./apps/api
         run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
       - name: Sync CLI version
-        if: steps.check_version.outputs.needs_update == 'true'
+        if: steps.cli_version.outputs.VERSION != steps.version.outputs.VERSION
         working-directory: ./packages/cli
         run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
 
@@ -50,9 +48,6 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
-      - name: Get version
-        id: get_version
-        run: echo "VERSION=$(node -p \"require('./packages/cli/package.json').version\")" >> $GITHUB_OUTPUT
       - run: npm ci
       - run: npm run build --workspace=packages/cli
       - working-directory: ./packages/cli
@@ -77,9 +72,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get version
-        id: get_version
-        run: echo "VERSION=$(node -p \"require('./apps/api/package.json').version\")" >> $GITHUB_OUTPUT
       - uses: docker/build-push-action@v5
         with:
           context: ./apps/api
