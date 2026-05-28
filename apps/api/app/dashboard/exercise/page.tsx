@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ReactECharts from 'react-echarts-library'
+import { useTranslations } from 'next-intl'
 
 interface ExerciseRecord {
   id: string
@@ -21,6 +22,8 @@ interface StatsData {
 }
 
 export default function ExercisePage() {
+  const t = useTranslations('exercise')
+  const tc = useTranslations('common')
   const [exercises, setExercises] = useState<ExerciseRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -46,19 +49,19 @@ export default function ExercisePage() {
         fetch('/api/v1/exercises?limit=10'),
         fetch('/api/v1/exercises/stats?last=30d')
       ])
-      
+
       if (exercisesRes.ok) {
         const data = await exercisesRes.json()
         setExercises(data.exercises || [])
       }
-      
+
       if (statsRes.ok) {
         const data = await statsRes.json()
         setStats(data)
       }
     } catch (error) {
       console.error('Failed to fetch exercises:', error)
-      setError('Failed to load data. Please try again.')
+      setError(tc('errorLoad'))
     } finally {
       setLoading(false)
     }
@@ -66,7 +69,7 @@ export default function ExercisePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    
+
     const formDataToSend = new FormData()
     formDataToSend.append('type', formData.type)
     formDataToSend.append('duration', formData.duration)
@@ -79,10 +82,10 @@ export default function ExercisePage() {
         method: 'POST',
         body: formDataToSend
       })
-      
+
       if (!res.ok) {
         const data = await res.json()
-        setSubmitError(data.error || 'Failed to save. Please try again.')
+        setSubmitError(data.error || tc('errorSave'))
         return
       }
 
@@ -91,7 +94,7 @@ export default function ExercisePage() {
       fetchData()
     } catch (error) {
       console.error('Failed to add exercise:', error)
-      setSubmitError('Failed to save. Please try again.')
+      setSubmitError(tc('errorSave'))
     }
   }
 
@@ -147,9 +150,9 @@ export default function ExercisePage() {
     other: '🎯'
   }
 
-  const chartData = stats?.frequencyByType 
+  const chartData = stats?.frequencyByType
     ? Object.entries(stats.frequencyByType).map(([type, count]) => ({
-        type: type.charAt(0).toUpperCase() + type.slice(1),
+        type: t(type),
         sessions: count
       }))
     : []
@@ -157,43 +160,43 @@ export default function ExercisePage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Exercise Tracking</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
-          {showForm ? 'Cancel' : '+ Log Exercise'}
+          {showForm ? tc('cancel') : t('logExercise')}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">{tc('retry')}</button>
         </div>
       )}
 
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">Log New Exercise</h2>
+          <h2 className="text-lg font-medium mb-4">{t('newExercise')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('type')} *</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  <option value="running">Running</option>
-                  <option value="strength">Strength</option>
-                  <option value="cycling">Cycling</option>
-                  <option value="swimming">Swimming</option>
-                  <option value="other">Other</option>
+                  <option value="running">{t('running')}</option>
+                  <option value="strength">{t('strength')}</option>
+                  <option value="cycling">{t('cycling')}</option>
+                  <option value="swimming">{t('swimming')}</option>
+                  <option value="other">{t('other')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Duration (min) *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('duration')} *</label>
                 <input
                   type="number"
                   required
@@ -205,7 +208,7 @@ export default function ExercisePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Calories Burned</label>
+                <label className="block text-sm font-medium text-gray-700">{t('caloriesBurned')}</label>
                 <input
                   type="number"
                   value={formData.caloriesBurned}
@@ -214,7 +217,7 @@ export default function ExercisePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Feeling (1-10)</label>
+                <label className="block text-sm font-medium text-gray-700">{t('feeling')}</label>
                 <input
                   type="number"
                   min="1"
@@ -226,10 +229,10 @@ export default function ExercisePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Activities</label>
+              <label className="block text-sm font-medium text-gray-700">{t('activities')}</label>
               <input
                 type="text"
-                placeholder="e.g., Jogging:duration=30,distance=5km"
+                placeholder={t('activitiesPlaceholder')}
                 value={formData.activities}
                 onChange={(e) => setFormData({ ...formData, activities: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -242,7 +245,7 @@ export default function ExercisePage() {
               type="submit"
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >
-              Save
+              {tc('save')}
             </button>
           </form>
         </div>
@@ -251,26 +254,26 @@ export default function ExercisePage() {
       {stats && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Total Sessions</div>
+            <div className="text-sm text-gray-500">{t('totalSessions')}</div>
             <div className="text-2xl font-bold">{stats.count}</div>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Total Duration</div>
-            <div className="text-2xl font-bold">{stats.totalDuration} min</div>
+            <div className="text-sm text-gray-500">{t('totalDuration')}</div>
+            <div className="text-2xl font-bold">{stats.totalDuration} {t('min')}</div>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Total Calories</div>
-            <div className="text-2xl font-bold">{stats.totalCalories} kcal</div>
+            <div className="text-sm text-gray-500">{t('totalCalories')}</div>
+            <div className="text-2xl font-bold">{stats.totalCalories} {t('kcal')}</div>
           </div>
         </div>
       )}
 
       {chartData.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">Exercise Frequency by Type (30 days)</h2>
+          <h2 className="text-lg font-medium mb-4">{t('frequencyTitle')}</h2>
           <ReactECharts
             option={{
-              tooltip: { trigger: 'axis', formatter: '{b}: {c} sessions' },
+              tooltip: { trigger: 'axis', formatter: `{b}: {c} ${t('sessions')}` },
               color: ['#6366f1'],
               xAxis: { type: 'category', data: chartData.map(d => d.type) },
               yAxis: { type: 'value' },
@@ -286,7 +289,7 @@ export default function ExercisePage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Recent Exercises</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('recentExercises')}</h2>
         </div>
         <ul className="divide-y divide-gray-200">
           {exercises.map((exercise) => (
@@ -295,16 +298,16 @@ export default function ExercisePage() {
                 <div className="flex items-center">
                   <span className="text-2xl mr-3">{typeIcons[exercise.type] || '🎯'}</span>
                   <div>
-                    <div className="text-lg font-medium text-gray-900 capitalize">{exercise.type}</div>
-                    <div className="text-sm text-gray-500">{exercise.duration} min</div>
+                    <div className="text-lg font-medium text-gray-900 capitalize">{t(exercise.type)}</div>
+                    <div className="text-sm text-gray-500">{exercise.duration} {t('min')}</div>
                   </div>
                 </div>
                 <div className="text-right">
                   {exercise.caloriesBurned && (
-                    <div className="text-sm text-gray-500">{exercise.caloriesBurned} kcal</div>
+                    <div className="text-sm text-gray-500">{exercise.caloriesBurned} {t('kcal')}</div>
                   )}
                   {exercise.feeling && (
-                    <div className="text-sm text-gray-500">Feeling: {exercise.feeling}/10</div>
+                    <div className="text-sm text-gray-500">{t('feelingLabel')}: {exercise.feeling}/10</div>
                   )}
                   <div className="text-xs text-gray-400">{new Date(exercise.date).toLocaleDateString()}</div>
                 </div>
@@ -312,7 +315,7 @@ export default function ExercisePage() {
             </li>
           ))}
           {exercises.length === 0 && (
-            <li className="px-6 py-4 text-center text-gray-500">No exercise records yet</li>
+            <li className="px-6 py-4 text-center text-gray-500">{t('noRecords')}</li>
           )}
         </ul>
       </div>

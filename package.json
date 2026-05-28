@@ -10,5 +10,8 @@
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "next-intl": "^4.12.0"
   }
 }

@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import MobileNav from './MobileNav'
 
 export default async function DashboardLayout({
@@ -13,6 +14,8 @@ export default async function DashboardLayout({
   if (!session) {
     redirect('/login')
   }
+
+  const t = await getTranslations('nav')
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -27,35 +30,35 @@ export default async function DashboardLayout({
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link href="/dashboard" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900">
-                  Dashboard
+                  {t('dashboard')}
                 </Link>
                 <Link href="/dashboard/weight" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Weight
+                  {t('weight')}
                 </Link>
                 <Link href="/dashboard/exercise" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Exercise
+                  {t('exercise')}
                 </Link>
                 <Link href="/dashboard/diet" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Diet
+                  {t('diet')}
                 </Link>
                 <Link href="/dashboard/sleep" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Sleep
+                  {t('sleep')}
                 </Link>
                 <Link href="/dashboard/timeline" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Timeline
+                  {t('timeline')}
                 </Link>
                 <Link href="/dashboard/records" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Records
+                  {t('records')}
                 </Link>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <MobileNav />
               <Link href="/dashboard/api-keys" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                API Keys
+                {t('apiKeys')}
               </Link>
               <Link href="/settings" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                Settings
+                {t('settings')}
               </Link>
             </div>
           </div>

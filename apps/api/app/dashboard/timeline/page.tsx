@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface TimelineItem {
   type: 'weight' | 'exercise' | 'diet' | 'sleep' | 'record'
@@ -10,6 +11,8 @@ interface TimelineItem {
 }
 
 export default function TimelinePage() {
+  const t = useTranslations('timeline')
+  const tc = useTranslations('common')
   const [items, setItems] = useState<TimelineItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +31,7 @@ export default function TimelinePage() {
       }
     } catch (error) {
       console.error('Failed to fetch timeline:', error)
-      setError('Failed to load data. Please try again.')
+      setError(tc('errorLoad'))
     } finally {
       setLoading(false)
     }
@@ -71,18 +74,18 @@ export default function TimelinePage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Timeline</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">{tc('retry')}</button>
         </div>
       )}
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">All Activity</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('allActivity')}</h2>
         </div>
         <ul className="divide-y divide-gray-200">
           {items.map((item) => (
@@ -90,12 +93,12 @@ export default function TimelinePage() {
               <div className="flex items-start">
                 <span className="text-2xl mr-3">{typeIcons[item.type] || '📝'}</span>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 capitalize mb-1">{item.type}</div>
+                  <div className="text-sm text-gray-500 capitalize mb-1">{t(item.type)}</div>
                   <div className="text-sm text-gray-900">
                     {item.type === 'weight' && `${item.data.weight} kg`}
                     {item.type === 'exercise' && `${item.data.duration} min ${item.data.type}`}
                     {item.type === 'diet' && `${item.data.calories || 0} kcal (${item.data.mealType})`}
-                    {item.type === 'sleep' && `${item.data.duration}h, Quality: ${item.data.quality}/10`}
+                    {item.type === 'sleep' && `${item.data.duration}h, ${t('qualityLabel') || 'Quality'}: ${item.data.quality}/10`}
                     {item.type === 'record' && item.data.type}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
@@ -106,7 +109,7 @@ export default function TimelinePage() {
             </li>
           ))}
           {items.length === 0 && (
-            <li className="px-6 py-4 text-center text-gray-500">No activity records yet</li>
+            <li className="px-6 py-4 text-center text-gray-500">{t('noRecords')}</li>
           )}
         </ul>
       </div>

@@ -1,6 +1,8 @@
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import Link from 'next/link'
 
 async function getTodayData(userId: string) {
   const today = new Date()
@@ -47,6 +49,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
+  const t = await getTranslations('dashboard')
   const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(session.user.id)
 
   const totalExerciseDuration = todayExercises.reduce((sum, e) => sum + e.duration, 0)
@@ -54,7 +57,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -65,9 +68,9 @@ export default async function DashboardPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Latest Weight</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">{t('latestWeight')}</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {latestWeight ? `${latestWeight.weight} kg` : 'No data'}
+                    {latestWeight ? `${latestWeight.weight} kg` : t('noData')}
                   </dd>
                   {latestWeight?.bodyFat && (
                     <dd className="text-sm text-gray-500">BF: {latestWeight.bodyFat}%</dd>
@@ -86,12 +89,12 @@ export default async function DashboardPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Last Sleep</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">{t('lastSleep')}</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {latestSleep ? `${latestSleep.duration}h` : 'No data'}
+                    {latestSleep ? `${latestSleep.duration}h` : t('noData')}
                   </dd>
                   {latestSleep && (
-                    <dd className="text-sm text-gray-500">Quality: {latestSleep.quality}/10</dd>
+                    <dd className="text-sm text-gray-500">{t('qualityLabel') || 'Quality'}: {latestSleep.quality}/10</dd>
                   )}
                 </dl>
               </div>
@@ -107,11 +110,11 @@ export default async function DashboardPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Today Exercise</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">{t('todayExercise')}</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {todayExercises.length > 0 ? `${todayExercises.length} sessions` : 'No exercise'}
+                    {todayExercises.length > 0 ? `${todayExercises.length} ${t('sessions')}` : t('noExercise')}
                   </dd>
-                  <dd className="text-sm text-gray-500">{totalExerciseDuration} min total</dd>
+                  <dd className="text-sm text-gray-500">{totalExerciseDuration} {t('minTotal')}</dd>
                 </dl>
               </div>
             </div>
@@ -126,11 +129,11 @@ export default async function DashboardPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Today Calories</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">{t('todayCalories')}</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {totalCalories > 0 ? `${totalCalories} kcal` : 'No data'}
+                    {totalCalories > 0 ? `${totalCalories} kcal` : t('noData')}
                   </dd>
-                  <dd className="text-sm text-gray-500">{todayDiets.length} meals</dd>
+                  <dd className="text-sm text-gray-500">{todayDiets.length} {t('meals')}</dd>
                 </dl>
               </div>
             </div>
@@ -140,33 +143,33 @@ export default async function DashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('quickActions')}</h2>
           <div className="grid grid-cols-2 gap-4">
-            <a href="/dashboard/weight" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <Link href="/dashboard/weight" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div className="text-xl mb-2">⚖️</div>
-              <div className="text-sm font-medium">Log Weight</div>
-            </a>
-            <a href="/dashboard/exercise" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <div className="text-sm font-medium">{t('logWeight')}</div>
+            </Link>
+            <Link href="/dashboard/exercise" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div className="text-xl mb-2">🏃</div>
-              <div className="text-sm font-medium">Log Exercise</div>
-            </a>
-            <a href="/dashboard/diet" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <div className="text-sm font-medium">{t('logExercise')}</div>
+            </Link>
+            <Link href="/dashboard/diet" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div className="text-xl mb-2">🍽️</div>
-              <div className="text-sm font-medium">Log Meal</div>
-            </a>
-            <a href="/dashboard/sleep" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <div className="text-sm font-medium">{t('logMeal')}</div>
+            </Link>
+            <Link href="/dashboard/sleep" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div className="text-xl mb-2">😴</div>
-              <div className="text-sm font-medium">Log Sleep</div>
-            </a>
+              <div className="text-sm font-medium">{t('logSleep')}</div>
+            </Link>
           </div>
         </div>
 
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('recentActivity')}</h2>
           <div className="text-sm text-gray-500">
-            <a href="/dashboard/timeline" className="text-indigo-600 hover:text-indigo-900">
-              View all activity →
-            </a>
+            <Link href="/dashboard/timeline" className="text-indigo-600 hover:text-indigo-900">
+              {t('viewAll')}
+            </Link>
           </div>
         </div>
       </div>

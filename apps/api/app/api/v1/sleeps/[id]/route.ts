@@ -124,7 +124,7 @@ export async function DELETE(
 
     await prisma.sleep.update({
       where: { id },
-      data: { deleteAt: Date.now() }
+      data: { deleteAt: Math.floor(Date.now() / 1000) }
     })
     return NextResponse.json({ success: true })
   } catch (error) {

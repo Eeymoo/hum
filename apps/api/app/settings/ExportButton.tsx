@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 export function ExportButton() {
+  const t = useTranslations('settings')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   async function handleExport() {
@@ -60,13 +62,13 @@ export function ExportButton() {
         disabled={status === 'loading'}
         className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {status === 'loading' ? 'Exporting...' : 'Export Data'}
+        {status === 'loading' ? t('exporting') : t('exportButton')}
       </button>
       {status === 'success' && (
-        <span className="text-sm text-green-600">Export completed!</span>
+        <span className="text-sm text-green-600">{t('exportSuccess')}</span>
       )}
       {status === 'error' && (
-        <span className="text-sm text-red-600">Export failed. Please try again.</span>
+        <span className="text-sm text-red-600">{t('exportError')}</span>
       )}
     </div>
   )

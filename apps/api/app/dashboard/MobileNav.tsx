@@ -3,23 +3,25 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const navLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/dashboard/weight', label: 'Weight' },
-  { href: '/dashboard/exercise', label: 'Exercise' },
-  { href: '/dashboard/diet', label: 'Diet' },
-  { href: '/dashboard/sleep', label: 'Sleep' },
-  { href: '/dashboard/timeline', label: 'Timeline' },
-  { href: '/dashboard/records', label: 'Records' },
-  { href: '/dashboard/api-keys', label: 'API Keys' },
-  { href: '/settings', label: 'Settings' },
-]
+import { useTranslations } from 'next-intl'
 
 export default function MobileNav() {
+  const t = useTranslations('nav')
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+
+  const navLinks = [
+    { href: '/dashboard', label: t('dashboard') },
+    { href: '/dashboard/weight', label: t('weight') },
+    { href: '/dashboard/exercise', label: t('exercise') },
+    { href: '/dashboard/diet', label: t('diet') },
+    { href: '/dashboard/sleep', label: t('sleep') },
+    { href: '/dashboard/timeline', label: t('timeline') },
+    { href: '/dashboard/records', label: t('records') },
+    { href: '/dashboard/api-keys', label: t('apiKeys') },
+    { href: '/settings', label: t('settings') },
+  ]
 
   // Close on route change
   useEffect(() => {

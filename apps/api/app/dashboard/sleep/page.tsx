@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ReactECharts from 'react-echarts-library'
+import { useTranslations } from 'next-intl'
 
 interface SleepRecord {
   id: string
@@ -22,6 +23,8 @@ interface StatsData {
 }
 
 export default function SleepPage() {
+  const t = useTranslations('sleep')
+  const tc = useTranslations('common')
   const [sleeps, setSleeps] = useState<SleepRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,19 +51,19 @@ export default function SleepPage() {
         fetch('/api/v1/sleeps?limit=10'),
         fetch('/api/v1/sleeps/stats?last=7d')
       ])
-      
+
       if (sleepsRes.ok) {
         const data = await sleepsRes.json()
         setSleeps(data.sleeps || [])
       }
-      
+
       if (statsRes.ok) {
         const data = await statsRes.json()
         setStats(data)
       }
     } catch (error) {
       console.error('Failed to fetch sleeps:', error)
-      setError('Failed to load data. Please try again.')
+      setError(tc('errorLoad'))
     } finally {
       setLoading(false)
     }
@@ -68,7 +71,7 @@ export default function SleepPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    
+
     const formDataToSend = new FormData()
     formDataToSend.append('duration', formData.duration)
     formDataToSend.append('bedTime', formData.bedTime)
@@ -82,10 +85,10 @@ export default function SleepPage() {
         method: 'POST',
         body: formDataToSend
       })
-      
+
       if (!res.ok) {
         const data = await res.json()
-        setSubmitError(data.error || 'Failed to save. Please try again.')
+        setSubmitError(data.error || tc('errorSave'))
         return
       }
 
@@ -94,7 +97,7 @@ export default function SleepPage() {
       fetchData()
     } catch (error) {
       console.error('Failed to add sleep:', error)
-      setSubmitError('Failed to save. Please try again.')
+      setSubmitError(tc('errorSave'))
     }
   }
 
@@ -144,36 +147,36 @@ export default function SleepPage() {
 
   const chartData = sleeps.slice(0, 7).reverse().map(s => ({
     date: new Date(s.date).toLocaleDateString('en-US', { weekday: 'short' }),
-    Duration: s.duration,
-    Quality: s.quality
+    [t('duration')]: s.duration,
+    [t('quality')]: s.quality
   }))
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Sleep Tracking</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
-          {showForm ? 'Cancel' : '+ Log Sleep'}
+          {showForm ? tc('cancel') : t('logSleep')}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">{tc('retry')}</button>
         </div>
       )}
 
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">Log Sleep</h2>
+          <h2 className="text-lg font-medium mb-4">{t('newSleep')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Duration (hours) *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('duration')} *</label>
                 <input
                   type="number"
                   step="0.5"
@@ -184,7 +187,7 @@ export default function SleepPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Bed Time *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('bedTime')} *</label>
                 <input
                   type="time"
                   required
@@ -194,7 +197,7 @@ export default function SleepPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Wake Time *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('wakeTime')} *</label>
                 <input
                   type="time"
                   required
@@ -206,7 +209,7 @@ export default function SleepPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Quality (1-10) *</label>
+                <label className="block text-sm font-medium text-gray-700">{t('quality')} *</label>
                 <input
                   type="number"
                   min="1"
@@ -218,7 +221,7 @@ export default function SleepPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Deep Sleep (hrs)</label>
+                <label className="block text-sm font-medium text-gray-700">{t('deepSleep')}</label>
                 <input
                   type="number"
                   step="0.5"
@@ -228,7 +231,7 @@ export default function SleepPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">REM Sleep (hrs)</label>
+                <label className="block text-sm font-medium text-gray-700">{t('remSleep')}</label>
                 <input
                   type="number"
                   step="0.5"
@@ -245,7 +248,7 @@ export default function SleepPage() {
               type="submit"
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >
-              Save
+              {tc('save')}
             </button>
           </form>
         </div>
@@ -254,15 +257,15 @@ export default function SleepPage() {
       {stats && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Avg Duration</div>
+            <div className="text-sm text-gray-500">{t('avgDuration')}</div>
             <div className="text-2xl font-bold">{stats.avgDuration?.toFixed(1) || '0'}h</div>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Avg Quality</div>
+            <div className="text-sm text-gray-500">{t('avgQuality')}</div>
             <div className="text-2xl font-bold">{stats.avgQuality?.toFixed(1) || '0'}/10</div>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">Avg Deep Sleep</div>
+            <div className="text-sm text-gray-500">{t('avgDeepSleep')}</div>
             <div className="text-2xl font-bold">{stats.avgDeepSleep?.toFixed(1) || '0'}h</div>
           </div>
         </div>
@@ -270,17 +273,17 @@ export default function SleepPage() {
 
       {chartData.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">Sleep Duration & Quality (Last 7 Days)</h2>
+          <h2 className="text-lg font-medium mb-4">{t('chartTitle')}</h2>
           <ReactECharts
             option={{
               tooltip: { trigger: 'axis' },
               color: ['#6366f1', '#f43f5e'],
-              legend: { data: ['Duration', 'Quality'] },
+              legend: { data: [t('duration'), t('quality')] },
               xAxis: { type: 'category', data: chartData.map(d => d.date) },
               yAxis: { type: 'value' },
               series: [
-                { type: 'bar', name: 'Duration', data: chartData.map(d => d.Duration) },
-                { type: 'bar', name: 'Quality', data: chartData.map(d => d.Quality) }
+                { type: 'bar', name: t('duration'), data: chartData.map(d => d[t('duration')]) },
+                { type: 'bar', name: t('quality'), data: chartData.map(d => d[t('quality')]) }
               ]
             }}
             style={{ height: 256 }}
@@ -290,7 +293,7 @@ export default function SleepPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Recent Sleep Records</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('recentRecords')}</h2>
         </div>
         <ul className="divide-y divide-gray-200">
           {sleeps.map((sleep) => (
@@ -304,12 +307,12 @@ export default function SleepPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium">Quality: {sleep.quality}/10</div>
+                  <div className="text-sm font-medium">{t('qualityLabel')}: {sleep.quality}/10</div>
                   {sleep.deepSleep && (
-                    <div className="text-sm text-gray-500">Deep: {sleep.deepSleep}h</div>
+                    <div className="text-sm text-gray-500">{t('deepLabel')}: {sleep.deepSleep}h</div>
                   )}
                   {sleep.remSleep && (
-                    <div className="text-sm text-gray-500">REM: {sleep.remSleep}h</div>
+                    <div className="text-sm text-gray-500">{t('remLabel')}: {sleep.remSleep}h</div>
                   )}
                   <div className="text-xs text-gray-400">{new Date(sleep.date).toLocaleDateString()}</div>
                 </div>
@@ -317,7 +320,7 @@ export default function SleepPage() {
             </li>
           ))}
           {sleeps.length === 0 && (
-            <li className="px-6 py-4 text-center text-gray-500">No sleep records yet</li>
+            <li className="px-6 py-4 text-center text-gray-500">{t('noRecords')}</li>
           )}
         </ul>
       </div>

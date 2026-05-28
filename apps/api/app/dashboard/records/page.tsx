@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface Record {
   id: string
@@ -13,6 +14,8 @@ interface Record {
 }
 
 export default function RecordsPage() {
+  const t = useTranslations('records')
+  const tc = useTranslations('common')
   const [records, setRecords] = useState<Record[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +42,7 @@ export default function RecordsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch records:', error)
-      setError('Failed to load data. Please try again.')
+      setError(tc('errorLoad'))
     } finally {
       setLoading(false)
     }
@@ -62,7 +65,7 @@ export default function RecordsPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        setSubmitError(data.error || 'Failed to save. Please try again.')
+        setSubmitError(data.error || tc('errorSave'))
         return
       }
 
@@ -71,12 +74,12 @@ export default function RecordsPage() {
       fetchData()
     } catch (error) {
       console.error('Failed to add record:', error)
-      setSubmitError('Failed to save. Please try again.')
+      setSubmitError(tc('errorSave'))
     }
   }
 
   async function deleteRecord(id: string) {
-    if (!confirm('Delete this record?')) return
+    if (!confirm(t('deleteConfirm'))) return
 
     try {
       const res = await fetch(`/api/v1/records/${id}`, { method: 'DELETE' })
@@ -124,65 +127,65 @@ export default function RecordsPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Records</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => { setShowForm(!showForm); setSubmitError(null) }}
           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
-          {showForm ? 'Cancel' : '+ New Record'}
+          {showForm ? tc('cancel') : t('newRecord')}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">{tc('retry')}</button>
         </div>
       )}
 
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">New Record</h2>
+          <h2 className="text-lg font-medium mb-4">{t('newRecordTitle')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
+                <label className="block text-sm font-medium text-gray-700">{t('type')}</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
                 >
-                  <option value="note">Note</option>
-                  <option value="mood">Mood</option>
-                  <option value="symptom">Symptom</option>
-                  <option value="medication">Medication</option>
-                  <option value="measurement">Measurement</option>
-                  <option value="other">Other</option>
+                  <option value="note">{t('noteType')}</option>
+                  <option value="mood">{t('mood')}</option>
+                  <option value="symptom">{t('symptom')}</option>
+                  <option value="medication">{t('medication')}</option>
+                  <option value="measurement">{t('measurement')}</option>
+                  <option value="other">{t('other')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Tags (comma separated)</label>
+                <label className="block text-sm font-medium text-gray-700">{t('tags')}</label>
                 <input
                   type="text"
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="tag1, tag2"
+                  placeholder={t('tagsPlaceholder')}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Data (JSON)</label>
+              <label className="block text-sm font-medium text-gray-700">{t('data')}</label>
               <textarea
                 value={formData.data}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                placeholder='{"key": "value"}'
+                placeholder={t('dataPlaceholder')}
                 rows={3}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 font-mono text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Note</label>
+              <label className="block text-sm font-medium text-gray-700">{t('note')}</label>
               <textarea
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -197,7 +200,7 @@ export default function RecordsPage() {
               type="submit"
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >
-              Save
+              {tc('save')}
             </button>
           </form>
         </div>
@@ -205,7 +208,7 @@ export default function RecordsPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">All Records</h2>
+          <h2 className="text-lg font-medium text-gray-900">{t('allRecords')}</h2>
         </div>
         <ul className="divide-y divide-gray-200">
           {records.map((record) => (
@@ -236,7 +239,7 @@ export default function RecordsPage() {
                   onClick={() => deleteRecord(record.id)}
                   className="ml-4 text-red-600 hover:text-red-800 text-sm"
                 >
-                  Delete
+                  {tc('delete')}
                 </button>
               </div>
             </li>
@@ -244,7 +247,7 @@ export default function RecordsPage() {
           {records.length === 0 && (
             <li className="px-6 py-8 text-center text-gray-500">
               <div className="text-4xl mb-2">📝</div>
-              <p>No records yet.</p>
+              <p>{t('noRecords')}</p>
             </li>
           )}
         </ul>
