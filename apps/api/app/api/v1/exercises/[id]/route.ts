@@ -23,8 +23,8 @@ export async function GET(
   }
 
   try {
-    const exercise = await prisma.exercise.findUnique({
-      where: { id }
+    const exercise = await prisma.exercise.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!exercise || exercise.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -47,8 +47,8 @@ export async function PATCH(
   }
 
   try {
-    const existing = await prisma.exercise.findUnique({
-      where: { id }
+    const existing = await prisma.exercise.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -112,8 +112,8 @@ export async function DELETE(
   }
 
   try {
-    const existing = await prisma.exercise.findUnique({
-      where: { id }
+    const existing = await prisma.exercise.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })

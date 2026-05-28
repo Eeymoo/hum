@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
-import { saveFile, validateFile, deleteFile } from '@/lib/file'
+import { saveFile, validateFile } from '@/lib/file'
 import { parseDateRange } from '@/lib/utils'
 
 function deserializeWeight(weight: any) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = {}
+    const where: any = { userId: authResult.userId }
     if (startDate || endDate) {
       where.date = {}
       if (startDate) {
@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const weightStr = formData.get('weight') as string
+    if (!weightStr || isNaN(parseFloat(weightStr))) {
+      return NextResponse.json({ error: 'weight is required and must be a number' }, { status: 400 })
+    }
     const bodyFatStr = formData.get('bodyFat') as string | null
     const muscleMassStr = formData.get('muscleMass') as string | null
     const bmiStr = formData.get('bmi') as string | null
@@ -94,6 +97,7 @@ export async function POST(request: NextRequest) {
 
     const weight = await prisma.weight.create({
       data: {
+        userId: authResult.userId,
         weight: parseFloat(weightStr),
         bodyFat: bodyFatStr ? parseFloat(bodyFatStr) : null,
         muscleMass: muscleMassStr ? parseFloat(muscleMassStr) : null,

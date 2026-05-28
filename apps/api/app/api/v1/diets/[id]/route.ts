@@ -23,8 +23,8 @@ export async function GET(
   }
 
   try {
-    const diet = await prisma.diet.findUnique({
-      where: { id }
+    const diet = await prisma.diet.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!diet || diet.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -47,8 +47,8 @@ export async function PATCH(
   }
 
   try {
-    const existing = await prisma.diet.findUnique({
-      where: { id }
+    const existing = await prisma.diet.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -114,8 +114,8 @@ export async function DELETE(
   }
 
   try {
-    const existing = await prisma.diet.findUnique({
-      where: { id }
+    const existing = await prisma.diet.findFirst({
+      where: { id, userId: authResult.userId }
     })
     if (!existing || existing.deleteAt !== 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })

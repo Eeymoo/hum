@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const end = searchParams.get('end')
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = { deleteAt: 0 }
+    const where: any = { userId: authResult.userId, deleteAt: 0 }
     if (startDate || endDate) {
       where.date = {}
       if (startDate) {

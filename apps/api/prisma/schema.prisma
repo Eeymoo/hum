@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -165,4 +166,26 @@ model Sleep {
 
   @@index([date])
   @@map("sleeps")
+}
+
+model DeviceCode {
+  id         String    @id @default(uuid())
+  deviceCode String    @unique
+  userCode   String    @unique
+  status     String    @default("pending")
+  userId     String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+
+  @@map("device_codes")
+}
+
+model AccessToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("access_tokens")
 }

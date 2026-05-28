@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
-import { saveFile, validateFile, deleteFile } from '@/lib/file'
+import { saveFile, validateFile } from '@/lib/file'
 import { parseDateRange, parseFoods } from '@/lib/utils'
 
 function deserializeDiet(diet: any) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = {}
+    const where: any = { userId: authResult.userId }
     if (mealType) where.mealType = mealType
     if (startDate || endDate) {
       where.date = {}
@@ -78,6 +78,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const mealType = formData.get('mealType') as string
+    if (!mealType) {
+      return NextResponse.json({ error: 'mealType is required' }, { status: 400 })
+    }
     const caloriesStr = formData.get('calories') as string | null
     const proteinStr = formData.get('protein') as string | null
     const carbsStr = formData.get('carbs') as string | null
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
 
     const diet = await prisma.diet.create({
       data: {
+        userId: authResult.userId,
         mealType,
         calories: caloriesStr ? parseInt(caloriesStr, 10) : null,
         protein: proteinStr ? parseFloat(proteinStr) : null,

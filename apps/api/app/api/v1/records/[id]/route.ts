@@ -16,7 +16,7 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams
     const includeDeleted = searchParams.get('includeDeleted') === 'true'
 
-    const where: any = { id }
+    const where: any = { id, userId: authResult.userId }
     if (!includeDeleted) {
       where.deleteAt = 0
     }
@@ -47,6 +47,13 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
     const { data, tags, note, attachments, date } = body
+
+    const existing = await prisma.record.findFirst({
+      where: { id, userId: authResult.userId }
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     const updateData: any = {}
     if (data !== undefined) {
@@ -88,6 +95,14 @@ export async function DELETE(
 
   try {
     const { id } = await params
+
+    const existing = await prisma.record.findFirst({
+      where: { id, userId: authResult.userId, deleteAt: 0 }
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     await prisma.record.update({
       where: { id },
       data: { deleteAt: Date.now() }

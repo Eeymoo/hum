@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     const where: any = {
+      userId: authResult.userId,
       OR: [
         { type: { contains: q, mode: 'insensitive' } },
         { note: { contains: q, mode: 'insensitive' } },

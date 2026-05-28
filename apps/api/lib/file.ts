@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { writeFile, mkdir, access, unlink } from 'fs/promises'
-import path from 'path'
+import path, { resolve, relative } from 'path'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads')
 const allowedMimeTypes = ['image/', 'application/gpx+xml', 'application/fit', 'text/plain', 'application/pdf']
@@ -58,5 +58,10 @@ export async function deleteFile(type: string, filename: string) {
 }
 
 export function getUploadPath(type: string, filename: string) {
-  return path.join(UPLOAD_DIR, type, filename)
+  const resolved = resolve(UPLOAD_DIR, type, filename)
+  const rel = relative(UPLOAD_DIR, resolved)
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Invalid file path')
+  }
+  return resolved
 }

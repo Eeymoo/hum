@@ -24,6 +24,8 @@ export default function ExercisePage() {
   const [exercises, setExercises] = useState<ExerciseRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     type: 'running',
@@ -39,6 +41,7 @@ export default function ExercisePage() {
 
   async function fetchData() {
     try {
+      setError(null)
       const [exercisesRes, statsRes] = await Promise.all([
         fetch('/api/v1/exercises?limit=10'),
         fetch('/api/v1/exercises/stats?last=30d')
@@ -55,6 +58,7 @@ export default function ExercisePage() {
       }
     } catch (error) {
       console.error('Failed to fetch exercises:', error)
+      setError('Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -76,18 +80,63 @@ export default function ExercisePage() {
         body: formDataToSend
       })
       
-      if (res.ok) {
-        setFormData({ type: 'running', duration: '', caloriesBurned: '', activities: '', feeling: '' })
-        setShowForm(false)
-        fetchData()
+      if (!res.ok) {
+        const data = await res.json()
+        setSubmitError(data.error || 'Failed to save. Please try again.')
+        return
       }
+
+      setFormData({ type: 'running', duration: '', caloriesBurned: '', activities: '', feeling: '' })
+      setShowForm(false)
+      fetchData()
     } catch (error) {
       console.error('Failed to add exercise:', error)
+      setSubmitError('Failed to save. Please try again.')
     }
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="animate-pulse bg-gray-200 rounded h-8 w-52"></div>
+          <div className="animate-pulse bg-gray-200 rounded h-10 w-36"></div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="bg-white shadow rounded-lg p-4">
+              <div className="animate-pulse bg-gray-200 rounded h-4 w-24 mb-2"></div>
+              <div className="animate-pulse bg-gray-200 rounded h-8 w-16"></div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="animate-pulse bg-gray-200 rounded h-6 w-64 mb-4"></div>
+          <div className="animate-pulse bg-gray-200 rounded h-64 w-full"></div>
+        </div>
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="animate-pulse bg-gray-200 rounded h-6 w-40"></div>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {[0, 1, 2, 3, 4].map(i => (
+              <li key={i} className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="animate-pulse bg-gray-200 rounded h-8 w-8 mr-3"></div>
+                    <div>
+                      <div className="animate-pulse bg-gray-200 rounded h-5 w-24 mb-2"></div>
+                      <div className="animate-pulse bg-gray-200 rounded h-4 w-16"></div>
+                    </div>
+                  </div>
+                  <div className="animate-pulse bg-gray-200 rounded h-4 w-20"></div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
   }
 
   const typeIcons: Record<string, string> = {
@@ -116,6 +165,13 @@ export default function ExercisePage() {
           {showForm ? 'Cancel' : '+ Log Exercise'}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -179,6 +235,9 @@ export default function ExercisePage() {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
+            {submitError && (
+              <div className="text-red-600 text-sm">{submitError}</div>
+            )}
             <button
               type="submit"
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"

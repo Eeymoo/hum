@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
-import { saveFile, validateFile, deleteFile } from '@/lib/file'
+import { saveFile, validateFile } from '@/lib/file'
 import { parseDateRange } from '@/lib/utils'
 
 function deserializeSleep(sleep: any) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = {}
+    const where: any = { userId: authResult.userId }
     if (startDate || endDate) {
       where.date = {}
       if (startDate) {
@@ -78,6 +78,18 @@ export async function POST(request: NextRequest) {
     const bedTime = formData.get('bedTime') as string
     const wakeTime = formData.get('wakeTime') as string
     const qualityStr = formData.get('quality') as string
+    if (!durationStr || isNaN(parseFloat(durationStr))) {
+      return NextResponse.json({ error: 'duration is required and must be a number' }, { status: 400 })
+    }
+    if (!bedTime) {
+      return NextResponse.json({ error: 'bedTime is required' }, { status: 400 })
+    }
+    if (!wakeTime) {
+      return NextResponse.json({ error: 'wakeTime is required' }, { status: 400 })
+    }
+    if (!qualityStr || isNaN(parseInt(qualityStr, 10))) {
+      return NextResponse.json({ error: 'quality is required and must be a number' }, { status: 400 })
+    }
     const deepSleepStr = formData.get('deepSleep') as string | null
     const remSleepStr = formData.get('remSleep') as string | null
     const awakeningsStr = formData.get('awakenings') as string | null
@@ -95,6 +107,7 @@ export async function POST(request: NextRequest) {
 
     const sleep = await prisma.sleep.create({
       data: {
+        userId: authResult.userId,
         duration: parseFloat(durationStr),
         bedTime,
         wakeTime,

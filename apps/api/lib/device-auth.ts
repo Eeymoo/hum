@@ -1,27 +1,27 @@
-const accessTokens = new Map<string, {
-  token: string
-  userId: string
-  expiresAt: number
-}>()
+import prisma from './prisma'
 
-export function storeAccessToken(token: string, userId: string, expiresIn: number = 3600000) {
-  accessTokens.set(token, {
-    token,
-    userId,
-    expiresAt: Date.now() + expiresIn
+export async function storeAccessToken(token: string, userId: string, expiresIn: number = 3600000) {
+  await prisma.accessToken.create({
+    data: {
+      token,
+      userId,
+      expiresAt: new Date(Date.now() + expiresIn),
+    },
   })
 }
 
-export function validateAccessToken(token: string) {
-  const data = accessTokens.get(token)
+export async function validateAccessToken(token: string) {
+  const data = await prisma.accessToken.findUnique({
+    where: { token },
+  })
   if (!data) return null
-  if (Date.now() > data.expiresAt) {
-    accessTokens.delete(token)
+  if (new Date() > data.expiresAt) {
+    await prisma.accessToken.delete({ where: { token } })
     return null
   }
   return data.userId
 }
 
-export function deleteAccessToken(token: string) {
-  accessTokens.delete(token)
+export async function deleteAccessToken(token: string) {
+  await prisma.accessToken.delete({ where: { token } }).catch(() => {})
 }

@@ -12,6 +12,7 @@ interface TimelineItem {
 export default function TimelinePage() {
   const [items, setItems] = useState<TimelineItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -19,6 +20,7 @@ export default function TimelinePage() {
 
   async function fetchData() {
     try {
+      setError(null)
       const res = await fetch('/api/v1/timeline')
       if (res.ok) {
         const data = await res.json()
@@ -26,13 +28,37 @@ export default function TimelinePage() {
       }
     } catch (error) {
       console.error('Failed to fetch timeline:', error)
+      setError('Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
+    return (
+      <div className="p-6">
+        <div className="animate-pulse bg-gray-200 rounded h-8 w-28 mb-6"></div>
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="animate-pulse bg-gray-200 rounded h-6 w-32"></div>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <li key={i} className="px-6 py-4">
+                <div className="flex items-start">
+                  <div className="animate-pulse bg-gray-200 rounded h-8 w-8 mr-3 mt-0.5"></div>
+                  <div className="flex-1">
+                    <div className="animate-pulse bg-gray-200 rounded h-4 w-20 mb-2"></div>
+                    <div className="animate-pulse bg-gray-200 rounded h-4 w-3/4 mb-2"></div>
+                    <div className="animate-pulse bg-gray-200 rounded h-3 w-28"></div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
   }
 
   const typeIcons: Record<string, string> = {
@@ -46,6 +72,13 @@ export default function TimelinePage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Timeline</h1>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+        </div>
+      )}
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">

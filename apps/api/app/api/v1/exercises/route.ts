@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
 import { verifyAuth } from '@/lib/auth'
-import { saveFile, validateFile, deleteFile } from '@/lib/file'
+import { saveFile, validateFile } from '@/lib/file'
 import { parseDateRange, parseActivities } from '@/lib/utils'
 
 function deserializeExercise(exercise: any) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = {}
+    const where: any = { userId: authResult.userId }
     if (type) where.type = type
     if (startDate || endDate) {
       where.date = {}
@@ -79,6 +79,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const type = formData.get('type') as string
     const durationStr = formData.get('duration') as string
+    if (!type) {
+      return NextResponse.json({ error: 'type is required' }, { status: 400 })
+    }
+    if (!durationStr || isNaN(parseInt(durationStr, 10))) {
+      return NextResponse.json({ error: 'duration is required and must be a number' }, { status: 400 })
+    }
     const caloriesBurnedStr = formData.get('caloriesBurned') as string | null
     const activitiesStr = formData.get('activities') as string
     const heartRateAvgStr = formData.get('heartRateAvg') as string | null
@@ -100,6 +106,7 @@ export async function POST(request: NextRequest) {
 
     const exercise = await prisma.exercise.create({
       data: {
+        userId: authResult.userId,
         type,
         duration: parseInt(durationStr, 10),
         caloriesBurned: caloriesBurnedStr ? parseInt(caloriesBurnedStr, 10) : null,

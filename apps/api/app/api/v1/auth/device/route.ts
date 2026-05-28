@@ -1,18 +1,8 @@
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
-
-const deviceCodes = new Map<string, {
-  userCode: string
-  deviceCode: string
-  createdAt: number
-  expiresAt: number
-  interval: number
-  status: 'pending' | 'approved' | 'expired'
-  userId?: string
-}>()
+import prisma from '@/lib/prisma'
 
 const DEVICE_CODE_EXPIRY = 600000
-const TOKEN_EXPIRY = 3600000
 const POLLING_INTERVAL = 5
 
 function generateUserCode(): string {
@@ -29,23 +19,15 @@ function generateUserCode(): string {
 export async function POST() {
   const deviceCode = randomUUID()
   const userCode = generateUserCode()
-  const now = Date.now()
+  const expiresAt = new Date(Date.now() + DEVICE_CODE_EXPIRY)
 
-  deviceCodes.set(deviceCode, {
-    userCode,
-    deviceCode,
-    createdAt: now,
-    expiresAt: now + DEVICE_CODE_EXPIRY,
-    interval: POLLING_INTERVAL,
-    status: 'pending'
+  await prisma.deviceCode.create({
+    data: {
+      deviceCode,
+      userCode,
+      expiresAt,
+    },
   })
-
-  setTimeout(() => {
-    const code = deviceCodes.get(deviceCode)
-    if (code && code.status === 'pending') {
-      deviceCodes.delete(deviceCode)
-    }
-  }, DEVICE_CODE_EXPIRY)
 
   return NextResponse.json({
     deviceCode,
@@ -53,17 +35,24 @@ export async function POST() {
     verificationUriComplete: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login/device?code=${userCode}`,
     verificationUri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login/device`,
     expiresIn: DEVICE_CODE_EXPIRY / 1000,
-    interval: POLLING_INTERVAL
+    interval: POLLING_INTERVAL,
   })
 }
 
 export async function GET() {
+  const now = new Date()
+  // 清理已过期的 device codes
+  await prisma.deviceCode.deleteMany({
+    where: { expiresAt: { lt: now }, status: 'pending' },
+  })
+
+  const codes = await prisma.deviceCode.findMany()
   return NextResponse.json({
-    codes: Array.from(deviceCodes.entries()).map(([deviceCode, data]) => ({
-      deviceCode,
-      userCode: data.userCode,
-      status: data.status,
-      expiresAt: data.expiresAt
-    }))
+    codes: codes.map((c) => ({
+      deviceCode: c.deviceCode,
+      userCode: c.userCode,
+      status: c.status,
+      expiresAt: c.expiresAt.getTime(),
+    })),
   })
 }

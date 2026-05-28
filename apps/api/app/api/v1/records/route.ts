@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const where: any = {}
+    const where: any = { userId: authResult.userId }
     if (type) {
       where.type = type
     }
@@ -122,8 +122,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, data, tags, note, attachments, date } = body
 
+    if (!type) {
+      return NextResponse.json({ error: 'type is required' }, { status: 400 })
+    }
+    if (!data) {
+      return NextResponse.json({ error: 'data is required' }, { status: 400 })
+    }
+
     const record = await prisma.record.create({
       data: {
+        userId: authResult.userId,
         type,
         data: serializeRecordData(data),
         tags: serializeArray(tags || []),

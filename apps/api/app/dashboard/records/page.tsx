@@ -15,6 +15,8 @@ interface Record {
 export default function RecordsPage() {
   const [records, setRecords] = useState<Record[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     type: 'note',
@@ -29,6 +31,7 @@ export default function RecordsPage() {
 
   async function fetchData() {
     try {
+      setError(null)
       const res = await fetch('/api/v1/records?limit=20')
       if (res.ok) {
         const data = await res.json()
@@ -36,6 +39,7 @@ export default function RecordsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch records:', error)
+      setError('Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -56,13 +60,18 @@ export default function RecordsPage() {
         })
       })
 
-      if (res.ok) {
-        setFormData({ type: 'note', data: '', tags: '', note: '' })
-        setShowForm(false)
-        fetchData()
+      if (!res.ok) {
+        const data = await res.json()
+        setSubmitError(data.error || 'Failed to save. Please try again.')
+        return
       }
+
+      setFormData({ type: 'note', data: '', tags: '', note: '' })
+      setShowForm(false)
+      fetchData()
     } catch (error) {
       console.error('Failed to add record:', error)
+      setSubmitError('Failed to save. Please try again.')
     }
   }
 
@@ -80,7 +89,36 @@ export default function RecordsPage() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="animate-pulse bg-gray-200 rounded h-8 w-28"></div>
+          <div className="animate-pulse bg-gray-200 rounded h-10 w-32"></div>
+        </div>
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="animate-pulse bg-gray-200 rounded h-6 w-32"></div>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <li key={i} className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="animate-pulse bg-gray-200 rounded-full h-5 w-16"></div>
+                      <div className="animate-pulse bg-gray-200 rounded h-4 w-12"></div>
+                    </div>
+                    <div className="animate-pulse bg-gray-200 rounded h-4 w-3/4 mb-2"></div>
+                    <div className="animate-pulse bg-gray-200 rounded h-3 w-24"></div>
+                  </div>
+                  <div className="animate-pulse bg-gray-200 rounded h-4 w-12 ml-4"></div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -88,12 +126,19 @@ export default function RecordsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Records</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setShowForm(!showForm); setSubmitError(null) }}
           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
           {showForm ? 'Cancel' : '+ New Record'}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => { setError(null); fetchData() }} className="text-sm underline">Retry</button>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -145,6 +190,9 @@ export default function RecordsPage() {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
               />
             </div>
+            {submitError && (
+              <div className="text-red-600 text-sm">{submitError}</div>
+            )}
             <button
               type="submit"
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"

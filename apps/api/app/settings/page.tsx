@@ -1,5 +1,7 @@
 import { auth, signOut } from '@/auth'
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
+import { ExportButton } from './ExportButton'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -17,9 +19,11 @@ export default async function SettingsPage() {
           <h2 className="text-lg font-medium text-gray-900 mb-4">Profile</h2>
           <div className="flex items-center">
             {session.user?.image ? (
-              <img
+              <Image
                 src={session.user.image}
                 alt="Profile"
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-full mr-4"
               />
             ) : (
@@ -56,11 +60,7 @@ export default async function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">
             Export all your health data.
           </p>
-          <button
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Export Data
-          </button>
+          <ExportButton />
         </div>
 
         <div className="bg-white shadow rounded-lg p-6">

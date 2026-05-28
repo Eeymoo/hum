@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = parseDateRange(last, start, end)
 
-    const baseWhere: any = {}
+    const baseWhere: any = { userId: authResult.userId }
     if (startDate || endDate) {
       baseWhere.date = {}
       if (startDate) {
