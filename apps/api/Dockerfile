@@ -34,7 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations_postgresql ./pr
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-RUN mkdir -p public uploads && chown nextjs:nodejs public uploads
+RUN mkdir -p public uploads prisma/migrations && chown -R nextjs:nodejs public uploads prisma
 
 # 创建启动脚本（在切换用户前创建，确保权限正确）
 RUN printf '%s\n' \
