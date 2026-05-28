@@ -1,59 +1,160 @@
 # Output Schema & Analysis
 
-## Record List JSON Structure
+## 专用类型数据结构
 
-`hum record list` returns:
+### Weight (体重)
 
 ```json
 {
-  "records": [
-    {
-      "id": "uuid",
-      "type": "weight|exercise|sleep|diet|custom|medical|supplement|symptom|other",
-      "data": {},           // type-specific JSON, schema varies by type
-      "tags": ["tag1"],
-      "note": "string",
-      "date": "2024-01-15",
-      "createdAt": "ISO8601",
-      "updatedAt": "ISO8601",
-      "deletedAt": null     // soft delete, use --include-deleted to see
-    }
-  ]
+  "id": "uuid",
+  "userId": "uuid",
+  "weight": 70.5,
+  "bodyFat": 18.5,
+  "muscleMass": 32.0,
+  "bmi": 22.1,
+  "water": 55.0,
+  "boneMass": 3.2,
+  "visceralFat": 8,
+  "note": "晨起空腹",
+  "attachments": [],
+  "date": "2024-01-15T00:00:00.000Z",
+  "createdAt": "2024-01-15T08:30:00.000Z",
+  "updatedAt": "2024-01-15T08:30:00.000Z"
 }
 ```
 
-Common `data` fields by type:
-- `weight`: `{ "value": 70.5, "unit": "kg" }`
-- `exercise`: `{ "type": "running", "duration": 30, "calories": 300 }`
-- `sleep`: `{ "hours": 7.5, "quality": "good" }`
-- `diet`: `{ "meal": "lunch", "total_calories": 500, "foods": [...] }`
+### Exercise (运动)
 
-## Built-in Analysis Commands
-
-Use these instead of manual `jq` when available:
-
-```bash
-hum weight timeline --last 30d     # trend + stats
-hum exercise summary --last 7d     # aggregated sessions
-hum sleep analysis --last 7d       # duration + quality stats
+```json
+{
+  "id": "uuid",
+  "userId": "uuid",
+  "type": "running",
+  "duration": 30,
+  "caloriesBurned": 300,
+  "activities": [
+    { "name": "卧推", "sets": 4, "reps": 10, "weight": 60 }
+  ],
+  "heartRateAvg": 130,
+  "heartRateMax": 165,
+  "feeling": 8,
+  "location": "健身房",
+  "note": "状态不错",
+  "attachments": [],
+  "date": "2024-01-15T00:00:00.000Z",
+  "createdAt": "2024-01-15T08:30:00.000Z",
+  "updatedAt": "2024-01-15T08:30:00.000Z"
+}
 ```
 
-**Limitations**: Built-in commands provide pre-computed aggregates. For custom groupings (e.g., by tag, by food type), use `hum record list` + `jq`.
+### Diet (饮食)
 
-## When to Use Built-in vs Manual
+```json
+{
+  "id": "uuid",
+  "userId": "uuid",
+  "mealType": "lunch",
+  "calories": 650,
+  "protein": 35.0,
+  "carbs": 70.0,
+  "fat": 20.0,
+  "fiber": 8.0,
+  "sodium": 800.0,
+  "foods": [
+    { "name": "鸡胸肉", "amount": "150g" },
+    { "name": "糙米饭", "amount": "200g" }
+  ],
+  "water": 300,
+  "note": "健康午餐",
+  "attachments": [],
+  "date": "2024-01-15T00:00:00.000Z",
+  "createdAt": "2024-01-15T08:30:00.000Z",
+  "updatedAt": "2024-01-15T08:30:00.000Z"
+}
+```
 
-| Task | Use |
-|------|-----|
-| Weight trend over time | `hum weight timeline` |
-| Exercise session count | `hum exercise summary` |
-| Sleep quality distribution | `hum sleep analysis` |
-| Group by arbitrary tag | `hum record list \| jq` |
-| Cross-type correlation | `hum record list \| jq` |
-| Custom date range filter | `hum record list \| jq 'select(.date >= ...)'` |
+### Sleep (睡眠)
 
-## Useful Flags for Analysis
+```json
+{
+  "id": "uuid",
+  "userId": "uuid",
+  "duration": 7.5,
+  "bedTime": "23:00",
+  "wakeTime": "06:30",
+  "quality": 8,
+  "deepSleep": 1.5,
+  "remSleep": 1.8,
+  "awakenings": 2,
+  "feeling": 7,
+  "note": "睡得不错",
+  "attachments": [],
+  "date": "2024-01-15T00:00:00.000Z",
+  "createdAt": "2024-01-15T08:30:00.000Z",
+  "updatedAt": "2024-01-15T08:30:00.000Z"
+}
+```
+
+---
+
+## List 响应结构
+
+所有 `list` 命令返回分页结构（以 weight 为例）：
+
+```json
+{
+  "weights": [...],
+  "total": 42,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 3
+}
+```
+
+每种类型的 list 响应顶层键名：
+- `hum weight list` → `weights`
+- `hum exercise list` → `exercises`
+- `hum diet list` → `diets`
+- `hum sleep list` → `sleeps`
+
+## Record (通用记录)
+
+`hum record` 用于非标准类型的自定义记录（custom/medical/supplement/symptom/other）：
+
+```json
+{
+  "id": "uuid",
+  "type": "medical",
+  "data": {},
+  "tags": "tag1,tag2",
+  "note": "string",
+  "attachments": "string",
+  "date": "2024-01-15T00:00:00.000Z",
+  "createdAt": "2024-01-15T08:30:00.000Z",
+  "updatedAt": "2024-01-15T08:30:00.000Z",
+  "deletedAt": null
+}
+```
+
+## 内置统计命令
 
 ```bash
-hum record list --include-deleted   # include soft-deleted records
-hum record list --type weight --last 365d   # full year for trend analysis
+hum weight stats --last 30d      # 体重趋势 + 统计
+hum exercise stats --last 7d     # 运动汇总
+hum diet stats --last 7d         # 饮食统计
+hum sleep stats --last 7d        # 睡眠分析
 ```
+
+## Timeline (时间线)
+
+查看所有类型健康数据的合并时间线：
+
+```bash
+# 最近 7 天全部数据
+hum timeline --last 7d
+
+# 指定日期范围
+hum timeline --start 2024-01-01 --end 2024-01-31
+```
+
+返回按时间排序的所有类型记录的合并视图。

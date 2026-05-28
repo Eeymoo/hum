@@ -13,7 +13,7 @@ Use this skill when:
 - Setting up Hum CLI for the first time
 - Recording health data (weight, exercise, sleep, diet)
 - Managing your health records
-- Querying your health timeline
+- Querying your health timeline or stats
 
 ## Getting Started
 
@@ -46,14 +46,17 @@ Then visit the URL shown and enter the code.
 Record your first health data:
 
 ```bash
-# Record weight
-hum record add --type weight --data '{"value": 70.5}'
+# Record weight (必填: 体重值 kg)
+hum weight add --value 70.5
 
-# Record exercise
-hum record add --type exercise --data '{"activity": "running", "duration": 30}'
+# Record exercise (必填: 运动类型 + 时长分钟)
+hum exercise add --type running --duration 30
 
-# Record sleep
-hum record add --type sleep --data '{"hours": 7.5, "quality": "good"}'
+# Record diet (必填: 餐次类型)
+hum diet add --meal lunch --foods "鸡胸肉:150g,糙米饭:200g"
+
+# Record sleep (必填: 时长 + 入睡时间 + 起床时间 + 质量)
+hum sleep add --duration 7.5 --bedtime 23:00 --waketime 06:30 --quality 8
 ```
 
 ## Daily Usage
@@ -61,31 +64,38 @@ hum record add --type sleep --data '{"hours": 7.5, "quality": "good"}'
 ### View Recent Records
 
 ```bash
-# List last 7 days
-hum record list --last 7d
+# 查看各类最近记录
+hum weight list --last 7d
+hum exercise list --last 7d
+hum diet list --last 7d
+hum sleep list --last 7d
 
-# Filter by type
-hum record list --type weight --last 30d
+# 综合时间线
+hum timeline --last 7d
 ```
 
-### Update Records
+### View Stats
 
 ```bash
-hum record update --id RECORD_ID --data '{"value": 71.0}'
+hum weight stats --last 30d
+hum exercise stats --last 7d
+hum diet stats --last 7d
+hum sleep stats --last 7d
 ```
 
-### Search Records
+### Update & Delete
 
 ```bash
-hum record search --query "running"
+hum weight update --id RECORD_ID --value 71.0
+hum weight delete --id RECORD_ID
 ```
 
 ## References
 
 Load these reference files when the user asks about specific topics:
 
-- **Weight/Exercise/Diet/Sleep commands** → read `references/specialized-commands.md`
+- **录入详细说明（Weight/Exercise/Diet/Sleep 字段与示例）** → read `references/specialized-commands.md`
+- **更新记录、附件、补录、API 调用** → read `references/advanced.md`
 - **Configuration or API keys** → read `references/config-and-keys.md`
 - **API errors or connection issues** → read `references/troubleshooting.md`
-- **Batch operations, tags, file attachments** → read `references/advanced.md`
-- **JSON output structure, built-in analysis commands** → read `references/output-schema.md`
+- **数据结构、响应格式、统计命令** → read `references/output-schema.md`
