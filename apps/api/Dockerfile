@@ -5,9 +5,8 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# 先复制 lockfile，依赖不变时这一层可以命中缓存
-COPY package-lock.json ./
-# 没有 lockfile 时会自动生成，有 lockfile 时走缓存
+# 先复制 package.json 和 lockfile，依赖不变时这一层可以命中缓存
+COPY package.json package-lock.json ./
 RUN npm install --ignore-scripts
 
 # --- 构建 ---
