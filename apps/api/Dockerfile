@@ -18,6 +18,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 RUN npx prisma generate
 RUN npm run build
+# 预生成 PostgreSQL 版本的 Prisma Client，运行时可直接使用
+RUN cp prisma/schema.prisma prisma/schema.prisma.bak \
+    && sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma \
+    && npx prisma generate \
+    && mkdir -p /tmp/prisma-client-postgresql \
+    && cp -r node_modules/.prisma/client/* /tmp/prisma-client-postgresql/ \
+    && cp prisma/schema.prisma.bak prisma/schema.prisma
 
 # --- 生产镜像 ---
 FROM base AS runner
@@ -40,7 +47,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 RUN mkdir -p node_modules/.bin && ln -s ../prisma/build/index.js node_modules/.bin/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-RUN mkdir -p public uploads prisma/migrations && chown -R nextjs:nodejs public uploads prisma
+COPY --from=builder --chown=nextjs:nodejs /tmp/prisma-client-postgresql ./prisma-client-postgresql
+RUN mkdir -p public uploads prisma/migrations node_modules/.prisma/client \
+    && chown -R nextjs:nodejs public uploads prisma prisma-client-postgresql node_modules/.prisma
 
 # 创建启动脚本
 RUN printf '%s\n' \
@@ -49,6 +58,10 @@ RUN printf '%s\n' \
     '' \
     'echo "🔄 Running database migration..."' \
     'node scripts/prisma-switch.js' \
+    'if [ "$DB_TYPE" = "postgresql" ]; then' \
+    '  echo "📦 Using pre-generated PostgreSQL Prisma Client"' \
+    '  cp -r prisma-client-postgresql/* node_modules/.prisma/client/' \
+    'fi' \
     'npx prisma migrate deploy' \
     '' \
     'echo "🚀 Starting application..."' \
