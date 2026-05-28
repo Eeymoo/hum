@@ -91,7 +91,8 @@
     "trendTitle": "Weight Trend (30 days)",
     "recentEntries": "Recent Entries",
     "noRecords": "No weight records yet",
-    "seriesWeight": "Weight"
+    "seriesWeight": "Weight",
+    "date": "Date"
   },
   "exercise": {
     "title": "Exercise Tracking",
@@ -117,7 +118,8 @@
     "sessions": "sessions",
     "min": "min",
     "kcal": "kcal",
-    "feelingLabel": "Feeling"
+    "feelingLabel": "Feeling",
+    "date": "Date"
   },
   "diet": {
     "title": "Diet Tracking",
@@ -142,7 +144,8 @@
     "macroLegend": "Macros Legend",
     "recentMeals": "Recent Meals",
     "noRecords": "No diet records yet",
-    "kcal": "kcal"
+    "kcal": "kcal",
+    "date": "Date"
   },
   "sleep": {
     "title": "Sleep Tracking",
@@ -162,7 +165,8 @@
     "noRecords": "No sleep records yet",
     "qualityLabel": "Quality",
     "deepLabel": "Deep",
-    "remLabel": "REM"
+    "remLabel": "REM",
+    "date": "Date"
   },
   "timeline": {
     "title": "Timeline",
@@ -192,7 +196,8 @@
     "dataPlaceholder": "{\"key\": \"value\"}",
     "allRecords": "All Records",
     "noRecords": "No records yet.",
-    "deleteConfirm": "Delete this record?"
+    "deleteConfirm": "Delete this record?",
+    "date": "Date"
   },
   "apiKeys": {
     "title": "API Keys",
@@ -211,9 +216,29 @@
     "deleteConfirm": "Are you sure you want to delete this API key?",
     "usageExample": "Usage Example"
   },
+  "timeRange": {
+    "7d": "7 Days",
+    "30d": "30 Days",
+    "90d": "90 Days",
+    "all": "All"
+  },
+  "pagination": {
+    "prev": "Prev",
+    "next": "Next",
+    "page": "page",
+    "total": "Total {count} items"
+  },
   "settings": {
     "title": "Settings",
     "profile": "Profile",
+    "timezone": "Timezone & Date Format",
+    "tzLabel": "Timezone (e.g. Asia/Shanghai)",
+    "tzDetected": "Detected",
+    "dateFormatLabel": "Date display format",
+    "tzSave": "Save",
+    "tzSaving": "Saving...",
+    "tzSaved": "Settings saved",
+    "tzError": "Failed to save settings",
     "apiKeys": "API Keys",
     "apiKeysDesc": "Manage your API keys for CLI access.",
     "manageKeys": "Manage API Keys",

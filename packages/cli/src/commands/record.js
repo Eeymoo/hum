@@ -1,5 +1,7 @@
 import { Command } from 'commander'
 import { request } from '../lib/api.js'
+import { appendTimezoneOffset, buildQueryParams } from '../lib/timezone.js'
+import { outputData } from '../lib/output.js'
 
 const record = new Command('record')
 
@@ -10,7 +12,7 @@ record
   .option('--tags <tags>', 'Comma-separated tags')
   .option('--note <note>', 'Note for the record')
   .option('--attachments <urls>', 'Comma-separated attachment URLs')
-  .option('--date <date>', 'Date for the record (YYYY-MM-DD)')
+  .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .action(async (options) => {
     try {
       const recordData = {
@@ -19,7 +21,7 @@ record
         tags: options.tags ? options.tags.split(',') : undefined,
         note: options.note,
         attachments: options.attachments ? options.attachments.split(',') : undefined,
-        date: options.date
+        date: appendTimezoneOffset(options.date)
       }
 
       const result = await request('/records', {
@@ -41,19 +43,15 @@ record
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
   .option('--end <date>', 'End date (YYYY-MM-DD)')
   .option('--date <date>', 'Specific date (YYYY-MM-DD)')
+  .option('--page <number>', 'Page number', '1')
+  .option('--limit <number>', 'Items per page', '20')
   .option('--include-deleted', 'Include deleted records')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      Object.entries(options).forEach(([key, value]) => {
-        if (value) {
-          const paramKey = key === 'includeDeleted' ? 'includeDeleted' : key
-          params.append(paramKey, value === true ? 'true' : value)
-        }
-      })
-
+      const { params, page } = buildQueryParams(options)
       const result = await request(`/records?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'record-list', page })
     } catch (error) {
       console.error('Failed to list records:', error.message)
     }
@@ -63,6 +61,7 @@ record
   .command('get')
   .requiredOption('--id <id>', 'Record ID')
   .option('--include-deleted', 'Include deleted records')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
       const params = new URLSearchParams()
@@ -71,7 +70,7 @@ record
       }
       const queryString = params.toString()
       const result = await request(`/records/${options.id}${queryString ? '?' + queryString : ''}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'record-get' })
     } catch (error) {
       console.error('Failed to get record:', error.message)
     }
@@ -84,7 +83,7 @@ record
   .option('--tags <tags>', 'Updated comma-separated tags')
   .option('--note <note>', 'Updated note')
   .option('--attachments <urls>', 'Updated comma-separated attachment URLs')
-  .option('--date <date>', 'Updated date (YYYY-MM-DD)')
+  .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .action(async (options) => {
     try {
       const updateData = {}
@@ -92,7 +91,7 @@ record
       if (options.tags) updateData.tags = options.tags.split(',')
       if (options.note) updateData.note = options.note
       if (options.attachments) updateData.attachments = options.attachments.split(',')
-      if (options.date) updateData.date = options.date
+      if (options.date) updateData.date = appendTimezoneOffset(options.date)
 
       const result = await request(`/records/${options.id}`, {
         method: 'PATCH',
@@ -125,17 +124,16 @@ record
   .requiredOption('--query <text>', 'Search query')
   .option('--type <type>', 'Filter by type')
   .option('--last <period>', 'Last N days/weeks/months/years')
+  .option('--page <number>', 'Page number', '1')
+  .option('--limit <number>', 'Items per page', '20')
   .option('--include-deleted', 'Include deleted records')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      params.append('q', options.query)
-      if (options.type) params.append('type', options.type)
-      if (options.last) params.append('last', options.last)
-      if (options.includeDeleted) params.append('includeDeleted', 'true')
-
+      const { params, page } = buildQueryParams(options)
+      params.set('q', options.query)
       const result = await request(`/records/search?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'record-list', page })
     } catch (error) {
       console.error('Failed to search records:', error.message)
     }

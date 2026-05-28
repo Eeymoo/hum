@@ -16,8 +16,11 @@
   },
   "type": "module",
   "dependencies": {
+    "cli-table3": "^0.6.5",
+    "@toon-format/toon": "^2.3.0",
     "commander": "^12.1.0",
     "conf": "^13.0.1",
+    "dayjs": "^1.11.13",
     "node-fetch": "^3.3.2"
   },
   "scripts": {

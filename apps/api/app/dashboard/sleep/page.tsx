@@ -1,8 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
+import TimeRangeSelector from '@/app/components/TimeRangeSelector'
+import Pagination from '@/app/components/Pagination'
+import { useTimezone } from '@/app/components/TimezoneProvider'
+
+interface TimeRange {
+  last?: string
+  start?: string
+  end?: string
+}
 
 interface SleepRecord {
   id: string
@@ -25,6 +34,7 @@ interface StatsData {
 export default function SleepPage() {
   const t = useTranslations('sleep')
   const tc = useTranslations('common')
+  const { formatDateTime, formatDate, appendTimezoneOffset } = useTimezone()
   const [sleeps, setSleeps] = useState<SleepRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -37,24 +47,40 @@ export default function SleepPage() {
     wakeTime: '06:00',
     quality: '7',
     deepSleep: '',
-    remSleep: ''
+    remSleep: '',
+    date: ''
   })
+  const [timeRange, setTimeRange] = useState<TimeRange>({ last: '7d' })
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
+      const params = new URLSearchParams()
+      params.set('page', String(page))
+      params.set('limit', String(limit))
+      if (timeRange.last) params.set('last', timeRange.last)
+      if (timeRange.start) params.set('start', timeRange.start)
+      if (timeRange.end) params.set('end', timeRange.end)
+
+      const statsParams = new URLSearchParams()
+      if (timeRange.last) statsParams.set('last', timeRange.last)
+      if (timeRange.start) statsParams.set('start', timeRange.start)
+      if (timeRange.end) statsParams.set('end', timeRange.end)
+
       const [sleepsRes, statsRes] = await Promise.all([
-        fetch('/api/v1/sleeps?limit=10'),
-        fetch('/api/v1/sleeps/stats?last=7d')
+        fetch(`/api/v1/sleeps?${params}`),
+        fetch(`/api/v1/sleeps/stats?${statsParams}`)
       ])
 
       if (sleepsRes.ok) {
         const data = await sleepsRes.json()
         setSleeps(data.sleeps || [])
+        setTotal(data.total || 0)
+        setTotalPages(data.totalPages || 1)
       }
 
       if (statsRes.ok) {
@@ -67,6 +93,15 @@ export default function SleepPage() {
     } finally {
       setLoading(false)
     }
+  }, [page, limit, timeRange, tc])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  function handleTimeRangeChange(range: TimeRange) {
+    setTimeRange(range)
+    setPage(1)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -79,6 +114,9 @@ export default function SleepPage() {
     formDataToSend.append('quality', formData.quality)
     if (formData.deepSleep) formDataToSend.append('deepSleep', formData.deepSleep)
     if (formData.remSleep) formDataToSend.append('remSleep', formData.remSleep)
+    if (formData.date) {
+      formDataToSend.append('date', appendTimezoneOffset(formData.date))
+    }
 
     try {
       const res = await fetch('/api/v1/sleeps', {
@@ -92,7 +130,7 @@ export default function SleepPage() {
         return
       }
 
-      setFormData({ duration: '', bedTime: '22:00', wakeTime: '06:00', quality: '7', deepSleep: '', remSleep: '' })
+      setFormData({ duration: '', bedTime: '22:00', wakeTime: '06:00', quality: '7', deepSleep: '', remSleep: '', date: '' })
       setShowForm(false)
       fetchData()
     } catch (error) {
@@ -146,7 +184,7 @@ export default function SleepPage() {
   }
 
   const chartData = sleeps.slice(0, 7).reverse().map(s => ({
-    date: new Date(s.date).toLocaleDateString('en-US', { weekday: 'short' }),
+    date: formatDate(s.date),
     [t('duration')]: s.duration,
     [t('quality')]: s.quality
   }))
@@ -161,6 +199,10 @@ export default function SleepPage() {
         >
           {showForm ? tc('cancel') : t('logSleep')}
         </button>
+      </div>
+
+      <div className="mb-6">
+        <TimeRangeSelector value={timeRange} onChange={handleTimeRangeChange} />
       </div>
 
       {error && (
@@ -241,6 +283,15 @@ export default function SleepPage() {
                 />
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">{t('date')}</label>
+              <input
+                type="datetime-local"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
             {submitError && (
               <div className="text-red-600 text-sm">{submitError}</div>
             )}
@@ -314,7 +365,7 @@ export default function SleepPage() {
                   {sleep.remSleep && (
                     <div className="text-sm text-gray-500">{t('remLabel')}: {sleep.remSleep}h</div>
                   )}
-                  <div className="text-xs text-gray-400">{new Date(sleep.date).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-400">{formatDateTime(sleep.date)}</div>
                 </div>
               </div>
             </li>
@@ -323,6 +374,14 @@ export default function SleepPage() {
             <li className="px-6 py-4 text-center text-gray-500">{t('noRecords')}</li>
           )}
         </ul>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1) }}
+        />
       </div>
     </div>
   )

@@ -1,5 +1,7 @@
 import { Command } from 'commander'
 import { request, createFormData } from '../lib/api.js'
+import { appendTimezoneOffset, buildQueryParams } from '../lib/timezone.js'
+import { outputData } from '../lib/output.js'
 
 const diet = new Command('diet')
 
@@ -15,7 +17,7 @@ diet
   .option('--foods <string>', 'Foods in format: "name:amount,name2:amount2"')
   .option('--water <value>', 'Water (ml)')
   .option('--note <note>', 'Note')
-  .option('--date <date>', 'Date (YYYY-MM-DD)')
+  .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
   .action(async (options) => {
     try {
@@ -30,7 +32,7 @@ diet
         foods: options.foods,
         water: options.water,
         note: options.note,
-        date: options.date
+        date: appendTimezoneOffset(options.date)
       }, options.file || [])
 
       const result = await request('/diets', {
@@ -51,19 +53,15 @@ diet
   .option('--last <period>', 'Last N days/weeks/months/years')
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
   .option('--end <date>', 'End date (YYYY-MM-DD)')
+  .option('--page <number>', 'Page number', '1')
+  .option('--limit <number>', 'Items per page', '20')
   .option('--include-deleted', 'Include deleted records')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      Object.entries(options).forEach(([key, value]) => {
-        if (value) {
-          const paramKey = key === 'meal' ? 'mealType' : key === 'includeDeleted' ? 'includeDeleted' : key
-          params.append(paramKey, value === true ? 'true' : value)
-        }
-      })
-
+      const { params, page } = buildQueryParams(options)
       const result = await request(`/diets?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'diet-list', page })
     } catch (error) {
       console.error('Failed to list diet records:', error.message)
     }
@@ -74,17 +72,12 @@ diet
   .option('--last <period>', 'Last N days/weeks/months/years')
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
   .option('--end <date>', 'End date (YYYY-MM-DD)')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      Object.entries(options).forEach(([key, value]) => {
-        if (value) {
-          params.append(key, value)
-        }
-      })
-
+      const { params } = buildQueryParams(options)
       const result = await request(`/diets/stats?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'diet-stats' })
     } catch (error) {
       console.error('Failed to get diet stats:', error.message)
     }
@@ -93,10 +86,11 @@ diet
 diet
   .command('get')
   .requiredOption('--id <id>', 'Diet record ID')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
       const result = await request(`/diets/${options.id}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'diet-get' })
     } catch (error) {
       console.error('Failed to get diet record:', error.message)
     }
@@ -115,7 +109,7 @@ diet
   .option('--foods <string>', 'Updated foods')
   .option('--water <value>', 'Updated water')
   .option('--note <note>', 'Updated note')
-  .option('--date <date>', 'Updated date (YYYY-MM-DD)')
+  .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
   .option('--replace-attachments', 'Replace existing attachments instead of adding')
   .action(async (options) => {
@@ -131,7 +125,7 @@ diet
         foods: options.foods,
         water: options.water,
         note: options.note,
-        date: options.date,
+        date: appendTimezoneOffset(options.date),
         replaceAttachments: options.replaceAttachments ? 'true' : undefined
       }, options.file || [])
 

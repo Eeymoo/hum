@@ -1,7 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import TimeRangeSelector from '@/app/components/TimeRangeSelector'
+import { useTimezone } from '@/app/components/TimezoneProvider'
+import Pagination from '@/app/components/Pagination'
+
+interface TimeRange {
+  last?: string
+  start?: string
+  end?: string
+}
 
 interface TimelineItem {
   type: 'weight' | 'exercise' | 'diet' | 'sleep' | 'record'
@@ -13,21 +22,32 @@ interface TimelineItem {
 export default function TimelinePage() {
   const t = useTranslations('timeline')
   const tc = useTranslations('common')
+  const { formatDateTime } = useTimezone()
   const [items, setItems] = useState<TimelineItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [timeRange, setTimeRange] = useState<TimeRange>({ last: '7d' })
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [allItems, setAllItems] = useState<TimelineItem[]>([])
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
-      const res = await fetch('/api/v1/timeline')
+      const params = new URLSearchParams()
+      params.set('limit', '1000') // Fetch all and paginate client-side
+      if (timeRange.last) params.set('last', timeRange.last)
+      if (timeRange.start) params.set('start', timeRange.start)
+      if (timeRange.end) params.set('end', timeRange.end)
+
+      const res = await fetch(`/api/v1/timeline?${params}`)
       if (res.ok) {
         const data = await res.json()
-        setItems(data.items || [])
+        const fetched = data.items || []
+        setAllItems(fetched)
+        setTotal(fetched.length)
+        setItems(fetched.slice(0, limit))
       }
     } catch (error) {
       console.error('Failed to fetch timeline:', error)
@@ -35,7 +55,23 @@ export default function TimelinePage() {
     } finally {
       setLoading(false)
     }
+  }, [timeRange, limit, tc])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const start = (page - 1) * limit
+    setItems(allItems.slice(start, start + limit))
+  }, [page, limit, allItems])
+
+  function handleTimeRangeChange(range: TimeRange) {
+    setTimeRange(range)
+    setPage(1)
   }
+
+  const totalPages = Math.ceil(total / limit) || 1
 
   if (loading) {
     return (
@@ -76,6 +112,10 @@ export default function TimelinePage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
+      <div className="mb-6">
+        <TimeRangeSelector value={timeRange} onChange={handleTimeRangeChange} />
+      </div>
+
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
@@ -102,7 +142,7 @@ export default function TimelinePage() {
                     {item.type === 'record' && item.data.type}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {new Date(item.date).toLocaleString()}
+                    {formatDateTime(item.date)}
                   </div>
                 </div>
               </div>
@@ -112,6 +152,14 @@ export default function TimelinePage() {
             <li className="px-6 py-4 text-center text-gray-500">{t('noRecords')}</li>
           )}
         </ul>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1) }}
+        />
       </div>
     </div>
   )

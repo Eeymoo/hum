@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { getTranslations } from 'next-intl/server'
 import { ExportButton } from './ExportButton'
+import TimezoneSettings from './TimezoneSettings'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -44,6 +45,8 @@ export default async function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <TimezoneSettings />
 
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('apiKeys')}</h2>

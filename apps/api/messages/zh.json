@@ -91,7 +91,8 @@
     "trendTitle": "体重趋势（30天）",
     "recentEntries": "最近记录",
     "noRecords": "暂无体重记录",
-    "seriesWeight": "体重"
+    "seriesWeight": "体重",
+    "date": "日期"
   },
   "exercise": {
     "title": "运动追踪",
@@ -117,7 +118,8 @@
     "sessions": "次",
     "min": "分钟",
     "kcal": "千卡",
-    "feelingLabel": "感受"
+    "feelingLabel": "感受",
+    "date": "日期"
   },
   "diet": {
     "title": "饮食追踪",
@@ -142,7 +144,8 @@
     "macroLegend": "营养素图例",
     "recentMeals": "最近饮食",
     "noRecords": "暂无饮食记录",
-    "kcal": "千卡"
+    "kcal": "千卡",
+    "date": "日期"
   },
   "sleep": {
     "title": "睡眠追踪",
@@ -162,7 +165,8 @@
     "noRecords": "暂无睡眠记录",
     "qualityLabel": "质量",
     "deepLabel": "深睡",
-    "remLabel": "REM"
+    "remLabel": "REM",
+    "date": "日期"
   },
   "timeline": {
     "title": "时间线",
@@ -192,7 +196,8 @@
     "dataPlaceholder": "{\"key\": \"value\"}",
     "allRecords": "全部记录",
     "noRecords": "暂无记录。",
-    "deleteConfirm": "确定删除这条记录？"
+    "deleteConfirm": "确定删除这条记录？",
+    "date": "日期"
   },
   "apiKeys": {
     "title": "API 密钥",
@@ -211,9 +216,29 @@
     "deleteConfirm": "确定要删除此 API 密钥吗？",
     "usageExample": "使用示例"
   },
+  "timeRange": {
+    "7d": "7 天",
+    "30d": "30 天",
+    "90d": "90 天",
+    "all": "全部"
+  },
+  "pagination": {
+    "prev": "上一页",
+    "next": "下一页",
+    "page": "页",
+    "total": "共 {count} 条"
+  },
   "settings": {
     "title": "设置",
     "profile": "个人资料",
+    "timezone": "时区与时间格式",
+    "tzLabel": "时区（例如 Asia/Shanghai）",
+    "tzDetected": "检测到",
+    "dateFormatLabel": "时间展示格式",
+    "tzSave": "保存",
+    "tzSaving": "保存中...",
+    "tzSaved": "设置已保存",
+    "tzError": "保存失败",
     "apiKeys": "API 密钥",
     "apiKeysDesc": "管理用于 CLI 访问的 API 密钥。",
     "manageKeys": "管理 API 密钥",

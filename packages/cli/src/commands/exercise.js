@@ -1,5 +1,7 @@
 import { Command } from 'commander'
 import { request, createFormData } from '../lib/api.js'
+import { appendTimezoneOffset, buildQueryParams } from '../lib/timezone.js'
+import { outputData } from '../lib/output.js'
 
 const exercise = new Command('exercise')
 
@@ -14,7 +16,7 @@ exercise
   .option('--feeling <value>', 'Feeling 1-10')
   .option('--location <location>', 'Location')
   .option('--note <note>', 'Note')
-  .option('--date <date>', 'Date (YYYY-MM-DD)')
+  .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
   .action(async (options) => {
     try {
@@ -28,7 +30,7 @@ exercise
         feeling: options.feeling,
         location: options.location,
         note: options.note,
-        date: options.date
+        date: appendTimezoneOffset(options.date)
       }, options.file || [])
 
       const result = await request('/exercises', {
@@ -49,19 +51,15 @@ exercise
   .option('--last <period>', 'Last N days/weeks/months/years')
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
   .option('--end <date>', 'End date (YYYY-MM-DD)')
+  .option('--page <number>', 'Page number', '1')
+  .option('--limit <number>', 'Items per page', '20')
   .option('--include-deleted', 'Include deleted records')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      Object.entries(options).forEach(([key, value]) => {
-        if (value) {
-          const paramKey = key === 'includeDeleted' ? 'includeDeleted' : key
-          params.append(paramKey, value === true ? 'true' : value)
-        }
-      })
-
+      const { params, page } = buildQueryParams(options)
       const result = await request(`/exercises?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'exercise-list', page })
     } catch (error) {
       console.error('Failed to list exercise records:', error.message)
     }
@@ -72,17 +70,12 @@ exercise
   .option('--last <period>', 'Last N days/weeks/months/years')
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
   .option('--end <date>', 'End date (YYYY-MM-DD)')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
-      const params = new URLSearchParams()
-      Object.entries(options).forEach(([key, value]) => {
-        if (value) {
-          params.append(key, value)
-        }
-      })
-
+      const { params } = buildQueryParams(options)
       const result = await request(`/exercises/stats?${params.toString()}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'exercise-stats' })
     } catch (error) {
       console.error('Failed to get exercise stats:', error.message)
     }
@@ -91,10 +84,11 @@ exercise
 exercise
   .command('get')
   .requiredOption('--id <id>', 'Exercise record ID')
+  .option('--format <format>', 'Output format: json, table, toon', 'json')
   .action(async (options) => {
     try {
       const result = await request(`/exercises/${options.id}`)
-      console.log(JSON.stringify(result, null, 2))
+      outputData(result, { format: options.format, type: 'exercise-get' })
     } catch (error) {
       console.error('Failed to get exercise record:', error.message)
     }
@@ -112,7 +106,7 @@ exercise
   .option('--feeling <value>', 'Updated feeling')
   .option('--location <location>', 'Updated location')
   .option('--note <note>', 'Updated note')
-  .option('--date <date>', 'Updated date (YYYY-MM-DD)')
+  .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
   .option('--replace-attachments', 'Replace existing attachments instead of adding')
   .action(async (options) => {
@@ -127,7 +121,7 @@ exercise
         feeling: options.feeling,
         location: options.location,
         note: options.note,
-        date: options.date,
+        date: appendTimezoneOffset(options.date),
         replaceAttachments: options.replaceAttachments ? 'true' : undefined
       }, options.file || [])
 

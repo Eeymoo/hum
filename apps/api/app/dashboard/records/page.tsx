@@ -1,7 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import TimeRangeSelector from '@/app/components/TimeRangeSelector'
+import Pagination from '@/app/components/Pagination'
+import { useTimezone } from '@/app/components/TimezoneProvider'
+
+interface TimeRange {
+  last?: string
+  start?: string
+  end?: string
+}
 
 interface Record {
   id: string
@@ -16,6 +25,7 @@ interface Record {
 export default function RecordsPage() {
   const t = useTranslations('records')
   const tc = useTranslations('common')
+  const { formatDateTime, appendTimezoneOffset } = useTimezone()
   const [records, setRecords] = useState<Record[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,20 +35,31 @@ export default function RecordsPage() {
     type: 'note',
     data: '',
     tags: '',
-    note: ''
+    note: '',
+    date: ''
   })
+  const [timeRange, setTimeRange] = useState<TimeRange>({ last: '7d' })
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
-      const res = await fetch('/api/v1/records?limit=20')
+      const params = new URLSearchParams()
+      params.set('page', String(page))
+      params.set('limit', String(limit))
+      if (timeRange.last) params.set('last', timeRange.last)
+      if (timeRange.start) params.set('start', timeRange.start)
+      if (timeRange.end) params.set('end', timeRange.end)
+
+      const res = await fetch(`/api/v1/records?${params}`)
       if (res.ok) {
         const data = await res.json()
         setRecords(data.records || [])
+        setTotal(data.total || 0)
+        setTotalPages(data.totalPages || 1)
       }
     } catch (error) {
       console.error('Failed to fetch records:', error)
@@ -46,21 +67,35 @@ export default function RecordsPage() {
     } finally {
       setLoading(false)
     }
+  }, [page, limit, timeRange, tc])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  function handleTimeRangeChange(range: TimeRange) {
+    setTimeRange(range)
+    setPage(1)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     try {
+      const body: any = {
+        type: formData.type,
+        data: formData.data ? JSON.parse(formData.data) : {},
+        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+        note: formData.note
+      }
+      if (formData.date) {
+        body.date = appendTimezoneOffset(formData.date)
+      }
+
       const res = await fetch('/api/v1/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: formData.type,
-          data: formData.data ? JSON.parse(formData.data) : {},
-          tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-          note: formData.note
-        })
+        body: JSON.stringify(body)
       })
 
       if (!res.ok) {
@@ -69,7 +104,7 @@ export default function RecordsPage() {
         return
       }
 
-      setFormData({ type: 'note', data: '', tags: '', note: '' })
+      setFormData({ type: 'note', data: '', tags: '', note: '', date: '' })
       setShowForm(false)
       fetchData()
     } catch (error) {
@@ -136,6 +171,10 @@ export default function RecordsPage() {
         </button>
       </div>
 
+      <div className="mb-6">
+        <TimeRangeSelector value={timeRange} onChange={handleTimeRangeChange} />
+      </div>
+
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
@@ -193,6 +232,15 @@ export default function RecordsPage() {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">{t('date')}</label>
+              <input
+                type="datetime-local"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
             {submitError && (
               <div className="text-red-600 text-sm">{submitError}</div>
             )}
@@ -232,7 +280,7 @@ export default function RecordsPage() {
                     </pre>
                   )}
                   <div className="text-xs text-gray-400 mt-1">
-                    {new Date(record.date).toLocaleDateString()}
+                    {formatDateTime(record.date)}
                   </div>
                 </div>
                 <button
@@ -251,6 +299,14 @@ export default function RecordsPage() {
             </li>
           )}
         </ul>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1) }}
+        />
       </div>
     </div>
   )

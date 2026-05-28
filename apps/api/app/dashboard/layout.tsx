@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import MobileNav from './MobileNav'
+import ClientProviders from '@/app/components/ClientProviders'
 
 export default async function DashboardLayout({
   children,
@@ -65,7 +66,7 @@ export default async function DashboardLayout({
         </div>
       </nav>
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
+        <ClientProviders>{children}</ClientProviders>
       </main>
     </div>
   )
