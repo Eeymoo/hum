@@ -16,7 +16,9 @@ services:
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
     volumes:
-      - hum_api_data:/app/prisma
+      # 注意：不要将整个 /app/prisma 挂载为 volume，
+      # 否则会覆盖镜像中的 migrations_postgresql/migrations_sqlite 目录
+      # 如果使用 SQLite 且需要持久化数据库文件，请单独挂载数据库文件
       - hum_api_uploads:/app/uploads
     networks:
       ai_net:
@@ -60,7 +62,6 @@ services:
       - postgres
 
 volumes:
-  hum_api_data:
   hum_api_uploads:
   hum_postgres_data:
 

@@ -31,7 +31,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations_sqlite ./prisma/migrations_sqlite
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations_postgresql ./prisma/migrations_postgresql
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# 复制完整的 prisma CLI 包（不能只复制 .bin/prisma，因为那是符号链接，
+# COPY 跟随符号链接会导致 __dirname 错误，找不到 WASM 文件）
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+RUN mkdir -p node_modules/.bin && ln -s ../prisma/build/index.js node_modules/.bin/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 RUN mkdir -p public uploads prisma/migrations && chown -R nextjs:nodejs public uploads prisma
