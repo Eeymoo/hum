@@ -1,26 +1,30 @@
 FROM node:20-alpine AS base
 
+# --- 安装依赖（利用 Docker 层缓存） ---
 FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
-COPY package.json ./
-RUN npm install
 
+# 先复制 lockfile，依赖不变时这一层可以命中缓存
+COPY package-lock.json ./
+# 没有 lockfile 时会自动生成，有 lockfile 时走缓存
+RUN npm install --ignore-scripts
+
+# --- 构建 ---
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# 指定生成 musl 兼容的 Prisma 引擎
 ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 RUN npx prisma generate
 RUN npm run build
 
+# --- 生产镜像 ---
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# 安装 openssl 并设置 Prisma 引擎目标
 RUN apk add --no-cache openssl
 ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 ENV LD_LIBRARY_PATH=/usr/lib
@@ -39,7 +43,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 RUN mkdir -p public uploads prisma/migrations && chown -R nextjs:nodejs public uploads prisma
 
-# 创建启动脚本（在切换用户前创建，确保权限正确）
+# 创建启动脚本
 RUN printf '%s\n' \
     '#!/bin/sh' \
     'set -e' \
