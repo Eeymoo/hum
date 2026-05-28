@@ -6,66 +6,63 @@ on:
       - 'v*.*.*'
 
 jobs:
-  version-sync:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
-      api_version: ${{ steps.api_version.outputs.VERSION }}
-      cli_version: ${{ steps.cli_version.outputs.VERSION }}
-      owner_lower: ${{ steps.owner.outputs.LOWER }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: owner
-        run: echo "LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-      - id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-      - id: api_version
-        run: echo "VERSION=$(node -e "console.log(require('./apps/api/package.json').version)")" >> $GITHUB_OUTPUT
-      - id: cli_version
-        run: echo "VERSION=$(node -e "console.log(require('./packages/cli/package.json').version)")" >> $GITHUB_OUTPUT
-      - name: Sync API version
-        if: steps.api_version.outputs.VERSION != steps.version.outputs.VERSION
-        working-directory: ./apps/api
-        run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-      - name: Sync CLI version
-        if: steps.cli_version.outputs.VERSION != steps.version.outputs.VERSION
-        working-directory: ./packages/cli
-        run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-
   publish-npm:
-    needs: version-sync
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: meta
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Sync CLI version
+        working-directory: ./packages/cli
+        run: npm version ${{ steps.meta.outputs.VERSION }} --no-git-tag-version
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+
       - run: npm ci
       - run: npm run build --workspace=packages/cli
-      - working-directory: ./packages/cli
+
+      - name: Publish CLI to npm
+        working-directory: ./packages/cli
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-docker:
-    needs: version-sync
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: meta
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Sync API version
+        working-directory: ./apps/api
+        run: npm version ${{ steps.meta.outputs.VERSION }} --no-git-tag-version
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v5
         with:
           context: ./apps/api
@@ -73,7 +70,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ needs.version-sync.outputs.owner_lower }}/hum-api:v${{ needs.version-sync.outputs.version }}
-            ghcr.io/${{ needs.version-sync.outputs.owner_lower }}/hum-api:latest
+            ghcr.io/${{ steps.meta.outputs.OWNER }}/hum-api:v${{ steps.meta.outputs.VERSION }}
+            ghcr.io/${{ steps.meta.outputs.OWNER }}/hum-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
