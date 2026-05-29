@@ -29,27 +29,45 @@ export async function GET(request: NextRequest) {
 
     const sleeps = await prisma.sleep.findMany({ where })
 
-    let totalDuration = 0
-    let totalQuality = 0
-    let totalDeepSleep = 0
-    let count = 0
-    let deepSleepCount = 0
+    if (sleeps.length === 0) {
+      return NextResponse.json({
+        avgDuration: null,
+        avgQuality: null,
+        avgDeepSleep: null,
+        count: 0
+      })
+    }
+
+    // 按日期分组汇总
+    const dailyMap = new Map<string, {
+      duration: number; quality: number; deepSleep: number;
+      deepSleepCount: number; count: number
+    }>()
 
     sleeps.forEach(s => {
-      totalDuration += s.duration
-      totalQuality += s.quality
-      if (s.deepSleep !== null) {
-        totalDeepSleep += s.deepSleep
-        deepSleepCount++
-      }
-      count++
+      const dateKey = s.date.toISOString().split('T')[0]
+      const day = dailyMap.get(dateKey) || { duration: 0, quality: 0, deepSleep: 0, deepSleepCount: 0, count: 0 }
+      day.duration += s.duration
+      day.quality += s.quality
+      if (s.deepSleep !== null) { day.deepSleep += s.deepSleep; day.deepSleepCount++ }
+      day.count++
+      dailyMap.set(dateKey, day)
     })
 
+    const days = Array.from(dailyMap.values())
+    const dayCount = days.length
+
     return NextResponse.json({
-      avgDuration: count > 0 ? totalDuration / count : null,
-      avgQuality: count > 0 ? totalQuality / count : null,
-      avgDeepSleep: deepSleepCount > 0 ? totalDeepSleep / deepSleepCount : null,
-      count
+      avgDuration: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.duration, 0) / dayCount * 10) / 10
+        : null,
+      avgQuality: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.quality / d.count, 0) / dayCount * 10) / 10
+        : null,
+      avgDeepSleep: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.deepSleep, 0) / dayCount * 10) / 10
+        : null,
+      count: dayCount
     })
   } catch (error) {
     console.error('Sleeps stats GET error:', error)

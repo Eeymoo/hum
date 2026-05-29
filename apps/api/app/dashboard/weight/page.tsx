@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
@@ -308,19 +309,19 @@ export default function WeightPage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {weights.map((weight) => (
-            <li key={weight.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
+            <li key={weight.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+              <Link href={`/dashboard/weight/${weight.id}`} className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-medium text-gray-900">{weight.weight} kg</div>
                   <div className="text-sm text-gray-500">{formatDateTime(weight.date)}</div>
                 </div>
-                {weight.bodyFat && (
-                  <div className="text-sm text-gray-500">{t('bodyFat')}: {weight.bodyFat}%</div>
-                )}
-                {weight.extraData && Object.keys(weight.extraData).length > 0 && (
-                  <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(weight.extraData)}</div>
-                )}
-              </div>
+                <div className="flex items-center gap-4">
+                  {weight.bodyFat && (
+                    <div className="text-sm text-gray-500">{t('bodyFat')}: {weight.bodyFat}%</div>
+                  )}
+                  <span className="text-gray-300">→</span>
+                </div>
+              </Link>
             </li>
           ))}
           {weights.length === 0 && (

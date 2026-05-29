@@ -3,31 +3,34 @@ export function parseDateRange(last?: string | null, start?: string | null, end?
   let endDate: Date | undefined
 
   if (last) {
-    const now = new Date()
+    // endDate 统一设为今天 00:00:00（配合 lte 查询即为昨天及之前）
+    endDate = new Date()
+    endDate.setHours(0, 0, 0, 0)
+
     const match = last.match(/^(\d+)(d|w|m|y)$/)
     if (match) {
       const [, num, unit] = match
       const n = parseInt(num, 10)
       switch (unit) {
         case 'd':
-          startDate = new Date(now.getTime() - n * 24 * 60 * 60 * 1000)
+          startDate = new Date(endDate.getTime() - n * 24 * 60 * 60 * 1000)
           break
         case 'w':
-          startDate = new Date(now.getTime() - n * 7 * 24 * 60 * 60 * 1000)
+          startDate = new Date(endDate.getTime() - n * 7 * 24 * 60 * 60 * 1000)
           break
         case 'm':
-          startDate = new Date(now)
+          startDate = new Date(endDate)
           startDate.setMonth(startDate.getMonth() - n)
           break
         case 'y':
-          startDate = new Date(now)
+          startDate = new Date(endDate)
           startDate.setFullYear(startDate.getFullYear() - n)
           break
       }
     } else {
       const num = parseInt(last, 10)
       if (!isNaN(num)) {
-        startDate = new Date(now.getTime() - num * 24 * 60 * 60 * 1000)
+        startDate = new Date(endDate.getTime() - num * 24 * 60 * 60 * 1000)
       }
     }
   }

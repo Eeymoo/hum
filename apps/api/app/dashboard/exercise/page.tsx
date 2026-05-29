@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
@@ -351,8 +352,8 @@ export default function ExercisePage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {exercises.map((exercise) => (
-            <li key={exercise.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
+            <li key={exercise.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+              <Link href={`/dashboard/exercise/${exercise.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="text-2xl mr-3">{typeIcons[exercise.type] || '🎯'}</span>
                   <div>
@@ -360,19 +361,16 @@ export default function ExercisePage() {
                     <div className="text-sm text-gray-500">{exercise.duration} {t('min')}</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  {exercise.caloriesBurned && (
-                    <div className="text-sm text-gray-500">{exercise.caloriesBurned} {t('kcal')}</div>
-                  )}
-                  {exercise.feeling && (
-                    <div className="text-sm text-gray-500">{t('feelingLabel')}: {exercise.feeling}/10</div>
-                  )}
-                  <div className="text-xs text-gray-400">{formatDateTime(exercise.date)}</div>
-                  {exercise.extraData && Object.keys(exercise.extraData).length > 0 && (
-                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(exercise.extraData)}</div>
-                  )}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    {exercise.caloriesBurned && (
+                      <div className="text-sm text-gray-500">{exercise.caloriesBurned} {t('kcal')}</div>
+                    )}
+                    <div className="text-xs text-gray-400">{formatDateTime(exercise.date)}</div>
+                  </div>
+                  <span className="text-gray-300">→</span>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
           {exercises.length === 0 && (

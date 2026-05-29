@@ -40,31 +40,42 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    let totalCalories = 0
-    let totalProtein = 0
-    let totalCarbs = 0
-    let totalFat = 0
     let totalWater = 0
-    let caloriesCount = 0
-    let proteinCount = 0
-    let carbsCount = 0
-    let fatCount = 0
+
+    // 按日期分组汇总
+    const dailyMap = new Map<string, {
+      calories: number; protein: number; carbs: number; fat: number
+    }>()
 
     diets.forEach(d => {
-      if (d.calories !== null) { totalCalories += d.calories; caloriesCount++ }
-      if (d.protein !== null) { totalProtein += d.protein; proteinCount++ }
-      if (d.carbs !== null) { totalCarbs += d.carbs; carbsCount++ }
-      if (d.fat !== null) { totalFat += d.fat; fatCount++ }
+      const dateKey = d.date.toISOString().split('T')[0]
+      const day = dailyMap.get(dateKey) || { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      if (d.calories !== null) day.calories += d.calories
+      if (d.protein !== null) day.protein += d.protein
+      if (d.carbs !== null) day.carbs += d.carbs
+      if (d.fat !== null) day.fat += d.fat
       if (d.water !== null) totalWater += d.water
+      dailyMap.set(dateKey, day)
     })
 
+    const days = Array.from(dailyMap.values())
+    const dayCount = days.length
+
     return NextResponse.json({
-      avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
-      avgProtein: proteinCount > 0 ? totalProtein / proteinCount : null,
-      avgCarbs: carbsCount > 0 ? totalCarbs / carbsCount : null,
-      avgFat: fatCount > 0 ? totalFat / fatCount : null,
+      avgCalories: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.calories, 0) / dayCount)
+        : null,
+      avgProtein: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.protein, 0) / dayCount * 10) / 10
+        : null,
+      avgCarbs: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.carbs, 0) / dayCount * 10) / 10
+        : null,
+      avgFat: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.fat, 0) / dayCount * 10) / 10
+        : null,
       totalWater: totalWater > 0 ? totalWater : null,
-      count: diets.length
+      count: dayCount
     })
   } catch (error) {
     console.error('Diets stats GET error:', error)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
@@ -260,9 +261,9 @@ export default function RecordsPage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {records.map((record) => (
-            <li key={record.id} className="px-6 py-4">
+            <li key={record.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
+                <Link href={`/dashboard/records/${record.id}`} className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                       {record.type}
@@ -274,17 +275,12 @@ export default function RecordsPage() {
                   {record.note && (
                     <p className="text-sm text-gray-700 mt-1">{record.note}</p>
                   )}
-                  {record.data && Object.keys(record.data).length > 0 && (
-                    <pre className="text-xs text-gray-500 mt-1 bg-gray-50 p-2 rounded">
-                      {JSON.stringify(record.data, null, 2)}
-                    </pre>
-                  )}
                   <div className="text-xs text-gray-400 mt-1">
                     {formatDateTime(record.date)}
                   </div>
-                </div>
+                </Link>
                 <button
-                  onClick={() => deleteRecord(record.id)}
+                  onClick={(e) => { e.preventDefault(); deleteRecord(record.id) }}
                   className="ml-4 text-red-600 hover:text-red-800 text-sm"
                 >
                   {tc('delete')}

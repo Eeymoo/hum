@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
@@ -388,8 +389,8 @@ export default function DietPage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {diets.map((diet) => (
-            <li key={diet.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
+            <li key={diet.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+              <Link href={`/dashboard/diet/${diet.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="text-2xl mr-3">{mealIcons[diet.mealType] || '🍽️'}</span>
                   <div>
@@ -401,16 +402,16 @@ export default function DietPage() {
                     )}
                   </div>
                 </div>
-                <div className="text-right">
-                  {diet.calories && (
-                    <div className="text-sm font-medium">{diet.calories} {t('kcal')}</div>
-                  )}
-                  <div className="text-xs text-gray-400">{formatDateTime(diet.date)}</div>
-                  {diet.extraData && Object.keys(diet.extraData).length > 0 && (
-                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(diet.extraData)}</div>
-                  )}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    {diet.calories && (
+                      <div className="text-sm font-medium">{diet.calories} {t('kcal')}</div>
+                    )}
+                    <div className="text-xs text-gray-400">{formatDateTime(diet.date)}</div>
+                  </div>
+                  <span className="text-gray-300">→</span>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
           {diets.length === 0 && (

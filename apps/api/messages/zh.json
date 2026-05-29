@@ -10,7 +10,8 @@
     "errorSave": "保存失败，请重试。",
     "copy": "复制",
     "created": "创建于",
-    "lastUsed": "最后使用"
+    "lastUsed": "最后使用",
+    "back": "返回"
   },
   "nav": {
     "dashboard": "概览",
@@ -92,7 +93,17 @@
     "recentEntries": "最近记录",
     "noRecords": "暂无体重记录",
     "seriesWeight": "体重",
-    "date": "日期"
+    "date": "日期",
+    "detailTitle": "体重详情",
+    "deleteConfirm": "确定删除这条体重记录？",
+    "muscleMass": "肌肉量（kg）",
+    "bmi": "BMI",
+    "water": "水分（%）",
+    "boneMass": "骨量（kg）",
+    "visceralFat": "内脏脂肪",
+    "attachments": "附件",
+    "extraData": "额外数据",
+    "updated": "更新于"
   },
   "exercise": {
     "title": "运动追踪",
@@ -121,7 +132,16 @@
     "min": "分钟",
     "kcal": "千卡",
     "feelingLabel": "感受",
-    "date": "日期"
+    "date": "日期",
+    "detailTitle": "运动详情",
+    "deleteConfirm": "确定删除这条运动记录？",
+    "heartRateAvg": "平均心率",
+    "heartRateMax": "最大心率",
+    "location": "地点",
+    "note": "备注",
+    "attachments": "附件",
+    "extraData": "额外数据",
+    "updated": "更新于"
   },
   "diet": {
     "title": "饮食追踪",
@@ -147,7 +167,15 @@
     "recentMeals": "最近饮食",
     "noRecords": "暂无饮食记录",
     "kcal": "千卡",
-    "date": "日期"
+    "date": "日期",
+    "detailTitle": "饮食详情",
+    "deleteConfirm": "确定删除这条饮食记录？",
+    "fiber": "纤维（g）",
+    "sodium": "钠（mg）",
+    "note": "备注",
+    "attachments": "附件",
+    "extraData": "额外数据",
+    "updated": "更新于"
   },
   "sleep": {
     "title": "睡眠追踪",
@@ -168,7 +196,14 @@
     "qualityLabel": "质量",
     "deepLabel": "深睡",
     "remLabel": "REM",
-    "date": "日期"
+    "date": "日期",
+    "detailTitle": "睡眠详情",
+    "deleteConfirm": "确定删除这条睡眠记录？",
+    "awakenings": "夜醒次数",
+    "note": "备注",
+    "attachments": "附件",
+    "extraData": "额外数据",
+    "updated": "更新于"
   },
   "timeline": {
     "title": "时间线",
@@ -199,7 +234,9 @@
     "allRecords": "全部记录",
     "noRecords": "暂无记录。",
     "deleteConfirm": "确定删除这条记录？",
-    "date": "日期"
+    "date": "日期",
+    "detailTitle": "记录详情",
+    "updated": "更新于"
   },
   "apiKeys": {
     "title": "API 密钥",

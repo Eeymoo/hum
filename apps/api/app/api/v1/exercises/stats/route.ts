@@ -31,20 +31,35 @@ export async function GET(request: NextRequest) {
 
     let totalDuration = 0
     let totalCalories = 0
-    let caloriesCount = 0
     const frequencyByType: Record<string, number> = {}
+
+    // 按日期分组汇总
+    const dailyMap = new Map<string, { duration: number; calories: number; caloriesCount: number }>()
 
     exercises.forEach(ex => {
       totalDuration += ex.duration
-      if (ex.caloriesBurned) { totalCalories += ex.caloriesBurned; caloriesCount++ }
+      if (ex.caloriesBurned) totalCalories += ex.caloriesBurned
       frequencyByType[ex.type] = (frequencyByType[ex.type] || 0) + 1
+
+      const dateKey = ex.date.toISOString().split('T')[0]
+      const day = dailyMap.get(dateKey) || { duration: 0, calories: 0, caloriesCount: 0 }
+      day.duration += ex.duration
+      if (ex.caloriesBurned) { day.calories += ex.caloriesBurned; day.caloriesCount++ }
+      dailyMap.set(dateKey, day)
     })
+
+    const days = Array.from(dailyMap.values())
+    const dayCount = days.length
 
     return NextResponse.json({
       totalDuration,
       totalCalories,
-      avgDuration: exercises.length > 0 ? totalDuration / exercises.length : null,
-      avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
+      avgDuration: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.duration, 0) / dayCount)
+        : null,
+      avgCalories: dayCount > 0
+        ? Math.round(days.reduce((s, d) => s + d.calories, 0) / dayCount)
+        : null,
       frequencyByType,
       count: exercises.length
     })

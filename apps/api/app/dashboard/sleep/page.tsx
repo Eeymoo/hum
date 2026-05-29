@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
@@ -349,8 +350,8 @@ export default function SleepPage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {sleeps.map((sleep) => (
-            <li key={sleep.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
+            <li key={sleep.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+              <Link href={`/dashboard/sleep/${sleep.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="text-2xl mr-3">😴</span>
                   <div>
@@ -358,20 +359,14 @@ export default function SleepPage() {
                     <div className="text-sm text-gray-500">{sleep.bedTime} - {sleep.wakeTime}</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium">{t('qualityLabel')}: {sleep.quality}/10</div>
-                  {sleep.deepSleep && (
-                    <div className="text-sm text-gray-500">{t('deepLabel')}: {sleep.deepSleep}h</div>
-                  )}
-                  {sleep.remSleep && (
-                    <div className="text-sm text-gray-500">{t('remLabel')}: {sleep.remSleep}h</div>
-                  )}
-                  <div className="text-xs text-gray-400">{formatDateTime(sleep.date)}</div>
-                  {sleep.extraData && Object.keys(sleep.extraData).length > 0 && (
-                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(sleep.extraData)}</div>
-                  )}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm font-medium">{t('qualityLabel')}: {sleep.quality}/10</div>
+                    <div className="text-xs text-gray-400">{formatDateTime(sleep.date)}</div>
+                  </div>
+                  <span className="text-gray-300">→</span>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
           {sleeps.length === 0 && (

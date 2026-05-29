@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import Pagination from '@/app/components/Pagination'
@@ -108,6 +109,14 @@ export default function TimelinePage() {
     record: '📝'
   }
 
+  const detailPaths: Record<string, string> = {
+    weight: '/dashboard/weight',
+    exercise: '/dashboard/exercise',
+    diet: '/dashboard/diet',
+    sleep: '/dashboard/sleep',
+    record: '/dashboard/records'
+  }
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
@@ -129,8 +138,8 @@ export default function TimelinePage() {
         </div>
         <ul className="divide-y divide-gray-200">
           {items.map((item) => (
-            <li key={`${item.type}-${item.id}`} className="px-6 py-4">
-              <div className="flex items-start">
+            <li key={`${item.type}-${item.id}`} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+              <Link href={`${detailPaths[item.type]}/${item.id}`} className="flex items-start">
                 <span className="text-2xl mr-3">{typeIcons[item.type] || '📝'}</span>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 capitalize mb-1">{t(item.type)}</div>
@@ -145,7 +154,8 @@ export default function TimelinePage() {
                     {formatDateTime(item.date)}
                   </div>
                 </div>
-              </div>
+                <span className="text-gray-300 mt-2">→</span>
+              </Link>
             </li>
           ))}
           {items.length === 0 && (

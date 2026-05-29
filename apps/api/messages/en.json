@@ -10,7 +10,8 @@
     "errorSave": "Failed to save. Please try again.",
     "copy": "Copy",
     "created": "Created",
-    "lastUsed": "Last used"
+    "lastUsed": "Last used",
+    "back": "Back"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -92,7 +93,17 @@
     "recentEntries": "Recent Entries",
     "noRecords": "No weight records yet",
     "seriesWeight": "Weight",
-    "date": "Date"
+    "date": "Date",
+    "detailTitle": "Weight Details",
+    "deleteConfirm": "Delete this weight record?",
+    "muscleMass": "Muscle Mass (kg)",
+    "bmi": "BMI",
+    "water": "Water (%)",
+    "boneMass": "Bone Mass (kg)",
+    "visceralFat": "Visceral Fat",
+    "attachments": "Attachments",
+    "extraData": "Extra Data",
+    "updated": "Updated"
   },
   "exercise": {
     "title": "Exercise Tracking",
@@ -121,7 +132,16 @@
     "min": "min",
     "kcal": "kcal",
     "feelingLabel": "Feeling",
-    "date": "Date"
+    "date": "Date",
+    "detailTitle": "Exercise Details",
+    "deleteConfirm": "Delete this exercise record?",
+    "heartRateAvg": "Avg Heart Rate",
+    "heartRateMax": "Max Heart Rate",
+    "location": "Location",
+    "note": "Note",
+    "attachments": "Attachments",
+    "extraData": "Extra Data",
+    "updated": "Updated"
   },
   "diet": {
     "title": "Diet Tracking",
@@ -147,7 +167,15 @@
     "recentMeals": "Recent Meals",
     "noRecords": "No diet records yet",
     "kcal": "kcal",
-    "date": "Date"
+    "date": "Date",
+    "detailTitle": "Diet Details",
+    "deleteConfirm": "Delete this diet record?",
+    "fiber": "Fiber (g)",
+    "sodium": "Sodium (mg)",
+    "note": "Note",
+    "attachments": "Attachments",
+    "extraData": "Extra Data",
+    "updated": "Updated"
   },
   "sleep": {
     "title": "Sleep Tracking",
@@ -168,7 +196,14 @@
     "qualityLabel": "Quality",
     "deepLabel": "Deep",
     "remLabel": "REM",
-    "date": "Date"
+    "date": "Date",
+    "detailTitle": "Sleep Details",
+    "deleteConfirm": "Delete this sleep record?",
+    "awakenings": "Awakenings",
+    "note": "Note",
+    "attachments": "Attachments",
+    "extraData": "Extra Data",
+    "updated": "Updated"
   },
   "timeline": {
     "title": "Timeline",
@@ -199,7 +234,9 @@
     "allRecords": "All Records",
     "noRecords": "No records yet.",
     "deleteConfirm": "Delete this record?",
-    "date": "Date"
+    "date": "Date",
+    "detailTitle": "Record Details",
+    "updated": "Updated"
   },
   "apiKeys": {
     "title": "API Keys",
