@@ -18,6 +18,16 @@ hum diet update --id <id> --calories 700
 hum sleep update --id <id> --quality 7 --note "其实还行"
 ```
 
+更新时也支持 `--extra-data` 字段：
+
+```bash
+# 添加或更新 extraData
+hum weight update --id <id> --extra-data '{"source":"手动录入"}'
+
+# 清除 extraData（传入空字符串）
+hum exercise update --id <id> --extra-data ""
+```
+
 更新时支持 `--replace-attachments` 标志来替换（而非追加）附件：
 
 ```bash
@@ -39,7 +49,7 @@ hum exercise add --type running --duration 30 --date 2024-01-08
 hum diet add --meal lunch --foods "沙拉:1份,面包:2片" --date 2024-01-14
 
 # 补录前天的睡眠
-hum sleep add --duration 7 --bedtime 22:30 --waketime 05:30 --quality 7 --date 2024-01-13
+hum sleep add --bedtime 22:30 --waketime 05:30 --quality 7 --date 2024-01-13
 ```
 
 ## 文件附件
@@ -60,6 +70,32 @@ hum diet update --id <id> --file ./meal-photo.jpg
 hum diet update --id <id> --file ./new-photo.jpg --replace-attachments
 ```
 
+CLI 会自动根据文件扩展名设置正确的 MIME 类型（支持 png/jpg/gif/webp/bmp/heic/heif/pdf/txt/gpx/fit 等），无需手动指定。
+
+## extraData 字段
+
+所有模块（weight、exercise、diet、sleep）都支持 `--extra-data` 参数，用于存储任意 JSON 格式的扩展数据：
+
+```bash
+# 存储 Third-party app 同步信息
+hum weight add --value 70.5 --extra-data '{"device":"小米体脂秤","syncMethod":"bluetooth"}'
+
+# 存储拍照识别的原始结果
+hum diet add --meal lunch --extra-data '{"recognizedBy":"OpenClaw","confidence":0.92,"rawResult":"..."}'
+
+# 存储运动轨迹数据
+hum exercise add --type running --duration 30 --extra-data '{"app":"Keep","route":"5km环湖","pace":"5:30"}'
+
+# 存储智能设备原始数据
+hum sleep add --bedtime 23:00 --waketime 06:30 --quality 8 \
+  --extra-data '{"device":"小米手环8","sleepStages":{"light":3.2,"deep":1.5,"rem":1.8}}'
+```
+
+`extraData` 的特点：
+- API 层以字符串形式存储，返回时自动解析为 JSON 对象
+- 传入空字符串 `""` 可清除 extraData
+- 不传入时不会覆盖已有值（update 场景）
+
 ## 时间范围格式
 
 `--last` 参数支持多种格式：
@@ -76,6 +112,21 @@ hum weight list --last 10     # 最近 10 天（无后缀等同天数）
 
 ```bash
 hum weight list --start 2024-01-01 --end 2024-01-31
+```
+
+## 输出格式
+
+所有 `list`、`stats`、`get` 命令支持 `--format` 参数：
+
+```bash
+# JSON 格式（默认）
+hum weight list --last 7d --format json
+
+# 表格格式
+hum weight list --last 7d --format table
+
+# Toon 格式（适合终端富文本展示）
+hum weight stats --last 7d --format toon
 ```
 
 ## Generic Record (通用记录)
@@ -125,6 +176,7 @@ curl -X POST http://localhost:3000/api/v1/weights \
   -H "Authorization: Bearer $HUM_API_KEY" \
   -F "weight=70.5" \
   -F "bodyFat=18.5" \
+  -F "extraData={\"source\":\"curl\"}" \
   -F "note=晨起空腹"
 
 # 创建运动记录

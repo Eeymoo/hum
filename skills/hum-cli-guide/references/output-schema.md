@@ -2,6 +2,8 @@
 
 ## 专用类型数据结构
 
+所有类型都包含 `extraData` 字段（可为 null），用于存储任意 JSON 格式的扩展数据。
+
 ### Weight (体重)
 
 ```json
@@ -15,6 +17,7 @@
   "water": 55.0,
   "boneMass": 3.2,
   "visceralFat": 8,
+  "extraData": null,
   "note": "晨起空腹",
   "attachments": [],
   "date": "2024-01-15T00:00:00.000Z",
@@ -39,6 +42,7 @@
   "heartRateMax": 165,
   "feeling": 8,
   "location": "健身房",
+  "extraData": null,
   "note": "状态不错",
   "attachments": [],
   "date": "2024-01-15T00:00:00.000Z",
@@ -65,6 +69,7 @@
     { "name": "糙米饭", "amount": "200g" }
   ],
   "water": 300,
+  "extraData": null,
   "note": "健康午餐",
   "attachments": [],
   "date": "2024-01-15T00:00:00.000Z",
@@ -87,11 +92,26 @@
   "remSleep": 1.8,
   "awakenings": 2,
   "feeling": 7,
+  "extraData": null,
   "note": "睡得不错",
   "attachments": [],
   "date": "2024-01-15T00:00:00.000Z",
   "createdAt": "2024-01-15T08:30:00.000Z",
   "updatedAt": "2024-01-15T08:30:00.000Z"
+}
+```
+
+### Food (食物查询结果)
+
+```json
+{
+  "source": "chinanutri",
+  "sourceId": "12345",
+  "name": "鸡胸肉",
+  "energyKcal": 133.0,
+  "protein": 31.0,
+  "fat": 3.6,
+  "carbs": 0
 }
 ```
 
@@ -116,6 +136,62 @@
 - `hum exercise list` → `exercises`
 - `hum diet list` → `diets`
 - `hum sleep list` → `sleeps`
+- `hum food --name ...` → `foods`（无分页，totalPages 固定为 1）
+
+## Stats 统计响应
+
+### Weight Stats
+```json
+{
+  "avgWeight": 70.5,
+  "minWeight": 68.0,
+  "maxWeight": 73.0,
+  "count": 30,
+  "trend": [...]
+}
+```
+
+### Exercise Stats
+```json
+{
+  "totalDuration": 300,
+  "totalCalories": 2500,
+  "avgDuration": 42.9,
+  "avgCalories": 357.1,
+  "frequencyByType": { "running": 3, "strength": 4 },
+  "count": 7
+}
+```
+
+- `avgDuration`：平均每次运动时长（分钟）
+- `avgCalories`：平均每次有热量记录的消耗（kcal），仅统计有 `caloriesBurned` 值的记录
+
+### Diet Stats
+```json
+{
+  "avgCalories": 550.0,
+  "avgProtein": 30.5,
+  "avgCarbs": 65.2,
+  "avgFat": 18.3,
+  "totalWater": 2100,
+  "count": 14
+}
+```
+
+- 所有平均值按**有该字段值的记录数**计算（非按天数）
+- `totalWater`：仅在总计 > 0 时返回，否则为 null
+
+### Sleep Stats
+```json
+{
+  "avgDuration": 7.2,
+  "avgQuality": 7.5,
+  "avgDeepSleep": 1.4,
+  "count": 7
+}
+```
+
+- `avgDeepSleep`：仅统计有深睡记录的数据，避免因缺失值拉低均值
 
 ## Record (通用记录)
 
@@ -140,10 +216,12 @@
 
 ```bash
 hum weight stats --last 30d      # 体重趋势 + 统计
-hum exercise stats --last 7d     # 运动汇总
-hum diet stats --last 7d         # 饮食统计
-hum sleep stats --last 7d        # 睡眠分析
+hum exercise stats --last 7d     # 运动汇总（含平均时长/热量）
+hum diet stats --last 7d         # 饮食统计（平均营养素）
+hum sleep stats --last 7d        # 睡眠分析（含深睡均值）
 ```
+
+所有 stats 命令支持 `--format` 参数：`json`（默认）、`table`、`toon`。
 
 ## Timeline (时间线)
 

@@ -22,7 +22,10 @@ hum weight add \
   --bone-mass 3.2 \
   --visceral-fat 8
 
-# 带备注和日期（补录历史数据）
+# 带 extraData 和备注（extraData 为任意 JSON，适合存储扩展信息）
+hum weight add --value 71.0 --extra-data '{"source":"小米体脂秤","synced":true}' --note "饭后"
+
+# 补录历史数据
 hum weight add --value 71.0 --note "饭后" --date 2024-01-15
 
 # 附带文件（如体脂秤截图）
@@ -35,14 +38,15 @@ hum weight add --value 70.5 --file ./scale-photo.jpg
 |------|------|------|
 | `--value` | ✅ | 体重值（kg） |
 | `--body-fat` | | 体脂率（%） |
-| `--muscle-mass` | 肌肉量（kg） |
-| `--bmi` | BMI 指数 |
-| `--water` | 水分率（%） |
-| `--bone-mass` | 骨量（kg） |
-| `--visceral-fat` | 内脏脂肪等级 |
-| `--note` | 备注 |
-| `--date` | 日期（YYYY-MM-DD），默认今天 |
-| `--file` | 附件文件路径（可多个） |
+| `--muscle-mass` | | 肌肉量（kg） |
+| `--bmi` | | BMI 指数 |
+| `--water` | | 水分率（%） |
+| `--bone-mass` | | 骨量（kg） |
+| `--visceral-fat` | | 内脏脂肪等级 |
+| `--extra-data` | | 额外数据（JSON 字符串） |
+| `--note` | | 备注 |
+| `--date` | | 日期（YYYY-MM-DD），默认今天 |
+| `--file` | | 附件文件路径（可多个） |
 
 ### 查询与统计
 
@@ -83,6 +87,11 @@ hum exercise add \
   --feeling 8 \
   --location "健身房"
 
+# 带 extraData（如从第三方应用同步的原始数据）
+hum exercise add \
+  --type running --duration 30 \
+  --extra-data '{"app":"Keep","route":"5km环湖"}'
+
 # 带活动明细（格式：名称:属性1=值1,属性2=值2;名称2:属性1=值1）
 hum exercise add \
   --type strength \
@@ -102,12 +111,13 @@ hum exercise add --type swimming --duration 45 --date 2024-01-10
 | `--calories` | | 消耗热量（kcal） |
 | `--activities` | | 活动明细，格式：`名称:属性=值,属性=值;名称2:属性=值` |
 | `--heart-rate-avg` | | 平均心率 |
-| `--heart-rate-max` | 最大心率 |
-| `--feeling` | 感受评分（1-10） |
-| `--location` | 地点 |
-| `--note` | 备注 |
-| `--date` | 日期（YYYY-MM-DD），默认今天 |
-| `--file` | 附件文件路径（可多个） |
+| `--heart-rate-max` | | 最大心率 |
+| `--feeling` | | 感受评分（1-10） |
+| `--extra-data` | | 额外数据（JSON 字符串） |
+| `--location` | | 地点 |
+| `--note` | | 备注 |
+| `--date` | | 日期（YYYY-MM-DD），默认今天 |
+| `--file` | | 附件文件路径（可多个） |
 
 ### 查询与统计
 
@@ -118,7 +128,7 @@ hum exercise list --last 7d
 # 按类型筛选
 hum exercise list --type running --last 30d
 
-# 运动统计
+# 运动统计（包含平均时长、平均热量）
 hum exercise stats --last 7d
 
 # 查看/更新/删除
@@ -154,6 +164,12 @@ hum diet add \
   --foods "鸡胸肉:150g,糙米饭:200g,西兰花:100g" \
   --calories 550
 
+# 带 extraData（如拍照识别的原始结果）
+hum diet add \
+  --meal lunch \
+  --foods "鸡胸肉:150g" \
+  --extra-data '{"recognizedBy":"OpenClaw","confidence":0.92}'
+
 # 快速录入
 hum diet add --meal snack --foods "苹果:1个" --note "下午加餐"
 ```
@@ -171,9 +187,10 @@ hum diet add --meal snack --foods "苹果:1个" --note "下午加餐"
 | `--sodium` | | 钠（mg） |
 | `--foods` | | 食物明细，格式：`食物名:食用量,食物名2:食用量2` |
 | `--water` | | 饮水量（ml） |
-| `--note` | 备注 |
-| `--date` | 日期（YYYY-MM-DD），默认今天 |
-| `--file` | 附件文件路径（可多个） |
+| `--extra-data` | | 额外数据（JSON 字符串） |
+| `--note` | | 备注 |
+| `--date` | | 日期（YYYY-MM-DD），默认今天 |
+| `--file` | | 附件文件路径（可多个） |
 
 ### 查询与统计
 
@@ -184,7 +201,7 @@ hum diet list --last 7d
 # 按餐次筛选
 hum diet list --meal breakfast --last 7d
 
-# 饮食统计
+# 饮食统计（平均热量/蛋白质/碳水/脂肪）
 hum diet stats --last 7d
 
 # 查看/更新/删除
@@ -200,7 +217,13 @@ hum diet delete --id <id>
 ### 录入睡眠
 
 ```bash
-# 必填：时长 + 入睡时间 + 起床时间 + 睡眠质量
+# 必填：入睡时间 + 起床时间 + 睡眠质量（时长可自动计算）
+hum sleep add \
+  --bedtime 23:00 \
+  --waketime 06:30 \
+  --quality 8
+
+# 手动指定时长（覆盖自动计算）
 hum sleep add \
   --duration 7.5 \
   --bedtime 23:00 \
@@ -209,7 +232,6 @@ hum sleep add \
 
 # 完整示例：带详细睡眠数据
 hum sleep add \
-  --duration 7.5 \
   --bedtime 23:00 \
   --waketime 06:30 \
   --quality 8 \
@@ -218,25 +240,33 @@ hum sleep add \
   --awakenings 2 \
   --feeling 7
 
+# 带 extraData（如从智能手环同步的数据）
+hum sleep add \
+  --bedtime 23:00 --waketime 06:30 --quality 8 \
+  --extra-data '{"device":"小米手环8","sleepStages":{"light":3.2,"deep":1.5,"rem":1.8}}'
+
 # 快速录入
 hum sleep add --duration 6 --bedtime 00:30 --waketime 06:30 --quality 5 --note "失眠"
 ```
+
+> **提示**：`--duration` 已改为可选。如果省略，CLI 会根据 `--bedtime` 和 `--waketime` 自动计算睡眠时长。如果两者都不提供则报错。
 
 **字段说明：**
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `--duration` | ✅ | 睡眠时长（小时） |
 | `--bedtime` | ✅ | 入睡时间（HH:mm） |
 | `--waketime` | ✅ | 起床时间（HH:mm） |
 | `--quality` | ✅ | 睡眠质量评分（1-10） |
+| `--duration` | | 睡眠时长（小时），省略时根据 bedtime/waketime 自动计算 |
 | `--deep-sleep` | | 深度睡眠时长（小时） |
 | `--rem-sleep` | | REM 睡眠时长（小时） |
 | `--awakenings` | | 夜醒次数 |
 | `--feeling` | | 起床感受评分（1-10） |
-| `--note` | 备注 |
-| `--date` | 日期（YYYY-MM-DD），默认今天 |
-| `--file` | 附件文件路径（可多个） |
+| `--extra-data` | | 额外数据（JSON 字符串） |
+| `--note` | | 备注 |
+| `--date` | | 日期（YYYY-MM-DD），默认今天 |
+| `--file` | | 附件文件路径（可多个） |
 
 ### 查询与统计
 
@@ -255,6 +285,49 @@ hum sleep delete --id <id>
 
 ---
 
+## Food (食物查询)
+
+### 查询食物营养信息
+
+```bash
+# 必填：食物名称（支持模糊匹配）
+hum food --name 鸡胸肉
+
+# 限制返回数量
+hum food --name 米饭 --limit 10
+
+# 跳过本地缓存，强制重新请求
+hum food --name 牛肉 --no-cache
+
+# 指定输出格式
+hum food --name 苹果 --format table
+hum food --name 苹果 --format toon
+```
+
+**字段说明：**
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `-n, --name` | ✅ | 食物名称（支持模糊匹配） |
+| `-l, --limit` | | 返回结果数量上限，默认 5 |
+| `--no-cache` | | 跳过本地缓存，重新请求远端 |
+| `--format` | | 输出格式：json（默认）、table、toon |
+
+**返回字段：**
+
+| 字段 | 说明 |
+|------|------|
+| `name` | 食物名称 |
+| `energyKcal` | 热量（kcal） |
+| `protein` | 蛋白质（g） |
+| `carbs` | 碳水化合物（g） |
+| `fat` | 脂肪（g） |
+| `source` | 数据来源（chinanutri） |
+
+> **说明**：食物数据来源于中国营养学会（chinanutri），本地缓存优先，远端查询失败时自动降级到缓存。
+
+---
+
 ## 通用查询参数
 
 所有 `list` 命令支持相同的查询参数：
@@ -264,6 +337,9 @@ hum sleep delete --id <id>
 | `--last <period>` | 时间范围（如 `7d` 7天、`2w` 2周、`1m` 1月、`1y` 1年，或纯数字表示天数） |
 | `--start <date>` | 起始日期（YYYY-MM-DD） |
 | `--end <date>` | 结束日期（YYYY-MM-DD） |
+| `--page <number>` | 页码，默认 1 |
+| `--limit <number>` | 每页条数，默认 20 |
 | `--include-deleted` | 包含已删除记录 |
+| `--format <format>` | 输出格式：json（默认）、table、toon |
 
-所有 `stats` 命令支持 `--last`、`--start`、`--end` 参数。
+所有 `stats` 命令支持 `--last`、`--start`、`--end`、`--format` 参数。
