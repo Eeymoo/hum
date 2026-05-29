@@ -1,6 +1,6 @@
 {
   "name": "@hum/api",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "private": true,
   "scripts": {
     "dev": "node scripts/prisma-switch.js && next dev",
