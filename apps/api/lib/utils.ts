@@ -34,9 +34,11 @@ export function parseDateRange(last?: string | null, start?: string | null, end?
 
   if (start) {
     startDate = new Date(start)
+    startDate.setHours(0, 0, 0, 0)
   }
   if (end) {
     endDate = new Date(end)
+    endDate.setHours(23, 59, 59, 999)
   }
 
   return { startDate, endDate }

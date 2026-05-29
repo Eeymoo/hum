@@ -16,6 +16,7 @@ diet
   .option('--sodium <value>', 'Sodium (mg)')
   .option('--foods <string>', 'Foods in format: "name:amount,name2:amount2"')
   .option('--water <value>', 'Water (ml)')
+  .option('--extra-data <json>', 'Extra data (JSON string)')
   .option('--note <note>', 'Note')
   .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
@@ -31,6 +32,7 @@ diet
         sodium: options.sodium,
         foods: options.foods,
         water: options.water,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date)
       }, options.file || [])
@@ -108,6 +110,7 @@ diet
   .option('--sodium <value>', 'Updated sodium')
   .option('--foods <string>', 'Updated foods')
   .option('--water <value>', 'Updated water')
+  .option('--extra-data <json>', 'Updated extra data (JSON string)')
   .option('--note <note>', 'Updated note')
   .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
@@ -124,6 +127,7 @@ diet
         sodium: options.sodium,
         foods: options.foods,
         water: options.water,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date),
         replaceAttachments: options.replaceAttachments ? 'true' : undefined

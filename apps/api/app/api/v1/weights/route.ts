@@ -7,7 +7,8 @@ import { parseDateRange } from '@/lib/utils'
 function deserializeWeight(weight: any) {
   return {
     ...weight,
-    attachments: weight.attachments ? deserializeArray(weight.attachments) : []
+    attachments: weight.attachments ? deserializeArray(weight.attachments) : [],
+    extraData: weight.extraData ? JSON.parse(weight.extraData) : null
   }
 }
 
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     const note = formData.get('note') as string | null
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
+    const extraDataStr = formData.get('extraData') as string | null
 
     const attachments: any[] = []
     for (const file of files) {
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
         visceralFat: visceralFatStr ? parseInt(visceralFatStr, 10) : null,
         note,
         attachments: serializeArray(attachments),
+        extraData: extraDataStr || null,
         date: dateStr ? new Date(dateStr) : new Date()
       }
     })

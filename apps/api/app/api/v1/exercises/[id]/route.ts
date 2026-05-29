@@ -8,7 +8,8 @@ function deserializeExercise(exercise: any) {
   return {
     ...exercise,
     activities: JSON.parse(exercise.activities || '[]'),
-    attachments: exercise.attachments ? deserializeArray(exercise.attachments) : []
+    attachments: exercise.attachments ? deserializeArray(exercise.attachments) : [],
+    extraData: exercise.extraData ? JSON.parse(exercise.extraData) : null
   }
 }
 
@@ -67,6 +68,7 @@ export async function PATCH(
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
     const replaceAttachments = formData.get('replaceAttachments') === 'true'
+    const extraDataStr = formData.get('extraData') as string | null
 
     const existingAttachments = existing.attachments ? deserializeArray(existing.attachments) : []
     let newAttachments = replaceAttachments ? [] : [...existingAttachments]
@@ -87,6 +89,7 @@ export async function PATCH(
     if (feelingStr !== undefined) data.feeling = feelingStr ? parseInt(feelingStr, 10) : null
     if (location !== undefined) data.location = location
     if (note !== undefined) data.note = note
+    if (extraDataStr !== undefined) data.extraData = extraDataStr || null
     if (dateStr) data.date = new Date(dateStr)
     data.attachments = serializeArray(newAttachments)
 

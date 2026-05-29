@@ -3,8 +3,8 @@ import { writeFile, mkdir, access, unlink } from 'fs/promises'
 import path, { resolve, relative } from 'path'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads')
-const allowedMimeTypes = ['image/', 'application/gpx+xml', 'application/fit', 'text/plain', 'application/pdf']
-const allowedExtensions = ['.gpx', '.fit', '.txt', '.pdf']
+const allowedMimeTypes = ['image/', 'application/gpx+xml', 'application/fit', 'text/plain', 'application/pdf', 'application/octet-stream']
+const allowedExtensions = ['.gpx', '.fit', '.txt', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.heic', '.heif']
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 export async function ensureUploadDir(type: string) {

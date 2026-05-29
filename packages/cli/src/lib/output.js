@@ -39,6 +39,7 @@ function extractItems(data, type) {
     'diet-list': 'diets',
     'sleep-list': 'sleeps',
     'record-list': 'records',
+    'food-list': 'foods',
     'timeline': 'items'
   }
   const key = keyMap[type]
@@ -101,6 +102,15 @@ function buildRows(items, type) {
         item.date ? formatDate(item.date, df) : '-',
         item.note || '-'
       ])
+    case 'food-list':
+      return items.map((item, idx) => [
+        idx + 1,
+        item.name,
+        item.energyKcal ?? '-',
+        item.protein ?? '-',
+        item.carbs ?? '-',
+        item.fat ?? '-'
+      ])
     case 'timeline':
       return items.map((item, idx) => {
         let summary = ''
@@ -128,6 +138,7 @@ function getHeaders(type) {
     case 'diet-list': return ['#', 'ID', '餐别', '热量', '蛋白质', '碳水', '脂肪', '日期']
     case 'sleep-list': return ['#', 'ID', '时长(h)', '质量', '入睡', '醒来', '深睡(h)', '日期']
     case 'record-list': return ['#', 'ID', '类型', '标签', '日期', '备注']
+    case 'food-list': return ['#', '名称', '热量(kcal)', '蛋白质(g)', '碳水(g)', '脂肪(g)']
     case 'timeline': return ['#', '时间', '类型', '摘要']
     default: return []
   }
@@ -154,7 +165,9 @@ function outputStats(data, type, format) {
     case 'exercise-stats':
       if (data.count !== undefined) rows.push(['总次数', data.count])
       if (data.totalDuration !== undefined) rows.push(['总时长', `${data.totalDuration} min`])
+      if (data.avgDuration !== null) rows.push(['平均时长', `${data.avgDuration.toFixed(1)} min`])
       if (data.totalCalories !== undefined) rows.push(['总热量', `${data.totalCalories} kcal`])
+      if (data.avgCalories !== null) rows.push(['平均热量', `${data.avgCalories.toFixed(0)} kcal`])
       if (data.frequencyByType) {
         for (const [t, c] of Object.entries(data.frequencyByType)) {
           rows.push([`频率 (${t})`, c])
@@ -162,7 +175,7 @@ function outputStats(data, type, format) {
       }
       break
     case 'diet-stats':
-      if (data.avgCaloriesPerDay !== undefined) rows.push(['日均热量', `${data.avgCaloriesPerDay?.toFixed?.(0) || data.avgCaloriesPerDay} kcal`])
+      if (data.avgCalories !== undefined) rows.push(['平均热量', `${data.avgCalories?.toFixed?.(0) || data.avgCalories} kcal`])
       if (data.avgProtein !== undefined) rows.push(['平均蛋白质', `${data.avgProtein?.toFixed?.(1) || data.avgProtein}g`])
       if (data.avgCarbs !== undefined) rows.push(['平均碳水', `${data.avgCarbs?.toFixed?.(1) || data.avgCarbs}g`])
       if (data.avgFat !== undefined) rows.push(['平均脂肪', `${data.avgFat?.toFixed?.(1) || data.avgFat}g`])

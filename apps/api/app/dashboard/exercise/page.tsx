@@ -21,11 +21,14 @@ interface ExerciseRecord {
   activities: Array<{ name: string }>
   feeling?: number
   date: string
+  extraData?: any
 }
 
 interface StatsData {
   totalDuration: number
   totalCalories: number
+  avgDuration: number | null
+  avgCalories: number | null
   frequencyByType: Record<string, number>
   count: number
 }
@@ -303,7 +306,7 @@ export default function ExercisePage() {
       )}
 
       {stats && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white shadow rounded-lg p-4">
             <div className="text-sm text-gray-500">{t('totalSessions')}</div>
             <div className="text-2xl font-bold">{stats.count}</div>
@@ -315,6 +318,10 @@ export default function ExercisePage() {
           <div className="bg-white shadow rounded-lg p-4">
             <div className="text-sm text-gray-500">{t('totalCalories')}</div>
             <div className="text-2xl font-bold">{stats.totalCalories} {t('kcal')}</div>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <div className="text-sm text-gray-500">{t('avgDuration')}</div>
+            <div className="text-2xl font-bold">{stats.avgDuration?.toFixed(1) || '0'} {t('min')}</div>
           </div>
         </div>
       )}
@@ -361,6 +368,9 @@ export default function ExercisePage() {
                     <div className="text-sm text-gray-500">{t('feelingLabel')}: {exercise.feeling}/10</div>
                   )}
                   <div className="text-xs text-gray-400">{formatDateTime(exercise.date)}</div>
+                  {exercise.extraData && Object.keys(exercise.extraData).length > 0 && (
+                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(exercise.extraData)}</div>
+                  )}
                 </div>
               </div>
             </li>

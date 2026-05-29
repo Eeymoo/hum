@@ -7,7 +7,8 @@ import { parseDateRange } from '@/lib/utils'
 function deserializeSleep(sleep: any) {
   return {
     ...sleep,
-    attachments: sleep.attachments ? deserializeArray(sleep.attachments) : []
+    attachments: sleep.attachments ? deserializeArray(sleep.attachments) : [],
+    extraData: sleep.extraData ? JSON.parse(sleep.extraData) : null
   }
 }
 
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
     const note = formData.get('note') as string | null
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
+    const extraDataStr = formData.get('extraData') as string | null
 
     const attachments: any[] = []
     for (const file of files) {
@@ -118,6 +120,7 @@ export async function POST(request: NextRequest) {
         feeling: feelingStr ? parseInt(feelingStr, 10) : null,
         note,
         attachments: serializeArray(attachments),
+        extraData: extraDataStr || null,
         date: dateStr ? new Date(dateStr) : new Date()
       }
     })

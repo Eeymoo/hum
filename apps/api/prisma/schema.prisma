@@ -87,6 +87,7 @@ model Weight {
   visceralFat Int?
   note        String?
   attachments String?
+  extraData   String?
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -110,6 +111,7 @@ model Exercise {
   location       String?
   note           String?
   attachments    String?
+  extraData      String?
   date           DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -135,6 +137,7 @@ model Diet {
   water       Int?
   note        String?
   attachments String?
+  extraData   String?
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -158,6 +161,7 @@ model Sleep {
   feeling     Int?
   note        String?
   attachments String?
+  extraData   String?
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

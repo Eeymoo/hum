@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'
-import { FormData, File } from 'node-fetch'
 import { readFileSync } from 'fs'
 import config from './config.js'
 
@@ -42,10 +40,27 @@ export function createFormData(fields, files = []) {
     }
   })
 
+  const mimeMap = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.heic': 'image/heic',
+    '.heif': 'image/heif',
+    '.pdf': 'application/pdf',
+    '.txt': 'text/plain',
+    '.gpx': 'application/gpx+xml',
+    '.fit': 'application/fit'
+  }
+
   files.forEach(filePath => {
     const buffer = readFileSync(filePath)
     const fileName = filePath.split('/').pop()
-    const file = new File([buffer], fileName)
+    const ext = '.' + fileName.split('.').pop().toLowerCase()
+    const type = mimeMap[ext] || 'application/octet-stream'
+    const file = new File([buffer], fileName, { type })
     formData.append('file', file)
   })
 

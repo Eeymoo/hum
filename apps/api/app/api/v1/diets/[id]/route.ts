@@ -8,7 +8,8 @@ function deserializeDiet(diet: any) {
   return {
     ...diet,
     foods: JSON.parse(diet.foods || '[]'),
-    attachments: diet.attachments ? deserializeArray(diet.attachments) : []
+    attachments: diet.attachments ? deserializeArray(diet.attachments) : [],
+    extraData: diet.extraData ? JSON.parse(diet.extraData) : null
   }
 }
 
@@ -68,6 +69,7 @@ export async function PATCH(
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
     const replaceAttachments = formData.get('replaceAttachments') === 'true'
+    const extraDataStr = formData.get('extraData') as string | null
 
     const existingAttachments = existing.attachments ? deserializeArray(existing.attachments) : []
     let newAttachments = replaceAttachments ? [] : [...existingAttachments]
@@ -89,6 +91,7 @@ export async function PATCH(
     if (foodsStr !== undefined) data.foods = JSON.stringify(parseFoods(foodsStr))
     if (waterStr !== undefined) data.water = waterStr ? parseInt(waterStr, 10) : null
     if (note !== undefined) data.note = note
+    if (extraDataStr !== undefined) data.extraData = extraDataStr || null
     if (dateStr) data.date = new Date(dateStr)
     data.attachments = serializeArray(newAttachments)
 

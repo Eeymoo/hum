@@ -8,7 +8,8 @@ function deserializeExercise(exercise: any) {
   return {
     ...exercise,
     activities: JSON.parse(exercise.activities || '[]'),
-    attachments: exercise.attachments ? deserializeArray(exercise.attachments) : []
+    attachments: exercise.attachments ? deserializeArray(exercise.attachments) : [],
+    extraData: exercise.extraData ? JSON.parse(exercise.extraData) : null
   }
 }
 
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     const note = formData.get('note') as string | null
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
+    const extraDataStr = formData.get('extraData') as string | null
 
     const attachments: any[] = []
     for (const file of files) {
@@ -117,6 +119,7 @@ export async function POST(request: NextRequest) {
         location,
         note,
         attachments: serializeArray(attachments),
+        extraData: extraDataStr || null,
         date: dateStr ? new Date(dateStr) : new Date()
       }
     })

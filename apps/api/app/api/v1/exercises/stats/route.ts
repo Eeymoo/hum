@@ -31,17 +31,20 @@ export async function GET(request: NextRequest) {
 
     let totalDuration = 0
     let totalCalories = 0
+    let caloriesCount = 0
     const frequencyByType: Record<string, number> = {}
 
     exercises.forEach(ex => {
       totalDuration += ex.duration
-      if (ex.caloriesBurned) totalCalories += ex.caloriesBurned
+      if (ex.caloriesBurned) { totalCalories += ex.caloriesBurned; caloriesCount++ }
       frequencyByType[ex.type] = (frequencyByType[ex.type] || 0) + 1
     })
 
     return NextResponse.json({
       totalDuration,
       totalCalories,
+      avgDuration: exercises.length > 0 ? totalDuration / exercises.length : null,
+      avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
       frequencyByType,
       count: exercises.length
     })

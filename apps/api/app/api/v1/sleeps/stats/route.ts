@@ -33,18 +33,22 @@ export async function GET(request: NextRequest) {
     let totalQuality = 0
     let totalDeepSleep = 0
     let count = 0
+    let deepSleepCount = 0
 
     sleeps.forEach(s => {
       totalDuration += s.duration
       totalQuality += s.quality
-      if (s.deepSleep !== null) totalDeepSleep += s.deepSleep
+      if (s.deepSleep !== null) {
+        totalDeepSleep += s.deepSleep
+        deepSleepCount++
+      }
       count++
     })
 
     return NextResponse.json({
       avgDuration: count > 0 ? totalDuration / count : null,
       avgQuality: count > 0 ? totalQuality / count : null,
-      avgDeepSleep: count > 0 ? totalDeepSleep / count : null,
+      avgDeepSleep: deepSleepCount > 0 ? totalDeepSleep / deepSleepCount : null,
       count
     })
   } catch (error) {

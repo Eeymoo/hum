@@ -14,6 +14,7 @@ exercise
   .option('--heart-rate-avg <value>', 'Average heart rate')
   .option('--heart-rate-max <value>', 'Max heart rate')
   .option('--feeling <value>', 'Feeling 1-10')
+  .option('--extra-data <json>', 'Extra data (JSON string)')
   .option('--location <location>', 'Location')
   .option('--note <note>', 'Note')
   .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
@@ -28,6 +29,7 @@ exercise
         heartRateAvg: options.heartRateAvg,
         heartRateMax: options.heartRateMax,
         feeling: options.feeling,
+        extraData: options.extraData,
         location: options.location,
         note: options.note,
         date: appendTimezoneOffset(options.date)
@@ -104,6 +106,7 @@ exercise
   .option('--heart-rate-avg <value>', 'Updated average heart rate')
   .option('--heart-rate-max <value>', 'Updated max heart rate')
   .option('--feeling <value>', 'Updated feeling')
+  .option('--extra-data <json>', 'Updated extra data (JSON string)')
   .option('--location <location>', 'Updated location')
   .option('--note <note>', 'Updated note')
   .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
@@ -119,6 +122,7 @@ exercise
         heartRateAvg: options.heartRateAvg,
         heartRateMax: options.heartRateMax,
         feeling: options.feeling,
+        extraData: options.extraData,
         location: options.location,
         note: options.note,
         date: appendTimezoneOffset(options.date),

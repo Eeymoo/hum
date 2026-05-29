@@ -14,6 +14,7 @@ weight
   .option('--water <value>', 'Water percentage')
   .option('--bone-mass <value>', 'Bone mass (kg)')
   .option('--visceral-fat <value>', 'Visceral fat level')
+  .option('--extra-data <json>', 'Extra data (JSON string)')
   .option('--note <note>', 'Note for the record')
   .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
@@ -27,6 +28,7 @@ weight
         water: options.water,
         boneMass: options.boneMass,
         visceralFat: options.visceralFat,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date)
       }, options.file || [])
@@ -101,6 +103,7 @@ weight
   .option('--water <value>', 'Updated water percentage')
   .option('--bone-mass <value>', 'Updated bone mass (kg)')
   .option('--visceral-fat <value>', 'Updated visceral fat level')
+  .option('--extra-data <json>', 'Updated extra data (JSON string)')
   .option('--note <note>', 'Updated note')
   .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
@@ -115,6 +118,7 @@ weight
         water: options.water,
         boneMass: options.boneMass,
         visceralFat: options.visceralFat,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date),
         replaceAttachments: options.replaceAttachments ? 'true' : undefined

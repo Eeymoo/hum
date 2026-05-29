@@ -6,7 +6,8 @@ import { saveFile, validateFile, deleteFile } from '@/lib/file'
 function deserializeSleep(sleep: any) {
   return {
     ...sleep,
-    attachments: sleep.attachments ? deserializeArray(sleep.attachments) : []
+    attachments: sleep.attachments ? deserializeArray(sleep.attachments) : [],
+    extraData: sleep.extraData ? JSON.parse(sleep.extraData) : null
   }
 }
 
@@ -65,6 +66,7 @@ export async function PATCH(
     const dateStr = formData.get('date') as string | null
     const files = formData.getAll('file') as File[]
     const replaceAttachments = formData.get('replaceAttachments') === 'true'
+    const extraDataStr = formData.get('extraData') as string | null
 
     const existingAttachments = existing.attachments ? deserializeArray(existing.attachments) : []
     let newAttachments = replaceAttachments ? [] : [...existingAttachments]
@@ -85,6 +87,7 @@ export async function PATCH(
     if (awakeningsStr !== undefined) data.awakenings = awakeningsStr ? parseInt(awakeningsStr, 10) : null
     if (feelingStr !== undefined) data.feeling = feelingStr ? parseInt(feelingStr, 10) : null
     if (note !== undefined) data.note = note
+    if (extraDataStr !== undefined) data.extraData = extraDataStr || null
     if (dateStr) data.date = new Date(dateStr)
     data.attachments = serializeArray(newAttachments)
 

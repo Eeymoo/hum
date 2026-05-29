@@ -22,6 +22,7 @@ interface SleepRecord {
   deepSleep?: number
   remSleep?: number
   date: string
+  extraData?: any
 }
 
 interface StatsData {
@@ -366,6 +367,9 @@ export default function SleepPage() {
                     <div className="text-sm text-gray-500">{t('remLabel')}: {sleep.remSleep}h</div>
                   )}
                   <div className="text-xs text-gray-400">{formatDateTime(sleep.date)}</div>
+                  {sleep.extraData && Object.keys(sleep.extraData).length > 0 && (
+                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(sleep.extraData)}</div>
+                  )}
                 </div>
               </div>
             </li>

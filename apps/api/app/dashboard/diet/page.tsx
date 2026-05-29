@@ -22,10 +22,11 @@ interface DietRecord {
   fat?: number
   foods: Array<{ name: string }>
   date: string
+  extraData?: any
 }
 
 interface StatsData {
-  avgCaloriesPerDay: number | null
+  avgCalories: number | null
   avgProtein: number | null
   avgCarbs: number | null
   avgFat: number | null
@@ -325,8 +326,8 @@ export default function DietPage() {
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white shadow rounded-lg p-4">
-            <div className="text-sm text-gray-500">{t('avgDailyCalories')}</div>
-            <div className="text-2xl font-bold">{stats.avgCaloriesPerDay?.toFixed(0) || '0'} {t('kcal')}</div>
+            <div className="text-sm text-gray-500">{t('avgCalories')}</div>
+            <div className="text-2xl font-bold">{stats.avgCalories?.toFixed(0) || '0'} {t('kcal')}</div>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
             <div className="text-sm text-gray-500">{t('avgProtein')}</div>
@@ -405,6 +406,9 @@ export default function DietPage() {
                     <div className="text-sm font-medium">{diet.calories} {t('kcal')}</div>
                   )}
                   <div className="text-xs text-gray-400">{formatDateTime(diet.date)}</div>
+                  {diet.extraData && Object.keys(diet.extraData).length > 0 && (
+                    <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(diet.extraData)}</div>
+                  )}
                 </div>
               </div>
             </li>

@@ -18,6 +18,7 @@ interface WeightRecord {
   weight: number
   bodyFat?: number
   date: string
+  extraData?: any
 }
 
 interface StatsData {
@@ -315,6 +316,9 @@ export default function WeightPage() {
                 </div>
                 {weight.bodyFat && (
                   <div className="text-sm text-gray-500">{t('bodyFat')}: {weight.bodyFat}%</div>
+                )}
+                {weight.extraData && Object.keys(weight.extraData).length > 0 && (
+                  <div className="text-xs text-gray-400 mt-1">📋 {JSON.stringify(weight.extraData)}</div>
                 )}
               </div>
             </li>

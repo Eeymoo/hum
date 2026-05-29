@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     if (diets.length === 0) {
       return NextResponse.json({
-        avgCaloriesPerDay: null,
+        avgCalories: null,
         avgProtein: null,
         avgCarbs: null,
         avgFat: null,
@@ -40,37 +40,30 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const daysInRange = (() => {
-      const s = startDate || diets.reduce((min, d) => d.date < min ? d.date : min, diets[0].date)
-      const e = endDate || new Date()
-      const diff = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)))
-      return diff
-    })()
-
     let totalCalories = 0
     let totalProtein = 0
     let totalCarbs = 0
     let totalFat = 0
     let totalWater = 0
-    let hasCaloriesCount = 0
+    let caloriesCount = 0
+    let proteinCount = 0
+    let carbsCount = 0
+    let fatCount = 0
 
     diets.forEach(d => {
-      if (d.calories !== null) {
-        totalCalories += d.calories
-        hasCaloriesCount++
-      }
-      if (d.protein !== null) totalProtein += d.protein
-      if (d.carbs !== null) totalCarbs += d.carbs
-      if (d.fat !== null) totalFat += d.fat
+      if (d.calories !== null) { totalCalories += d.calories; caloriesCount++ }
+      if (d.protein !== null) { totalProtein += d.protein; proteinCount++ }
+      if (d.carbs !== null) { totalCarbs += d.carbs; carbsCount++ }
+      if (d.fat !== null) { totalFat += d.fat; fatCount++ }
       if (d.water !== null) totalWater += d.water
     })
 
     return NextResponse.json({
-      avgCaloriesPerDay: hasCaloriesCount > 0 ? totalCalories / daysInRange : null,
-      avgProtein: diets.length > 0 ? totalProtein / daysInRange : null,
-      avgCarbs: diets.length > 0 ? totalCarbs / daysInRange : null,
-      avgFat: diets.length > 0 ? totalFat / daysInRange : null,
-      totalWater,
+      avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
+      avgProtein: proteinCount > 0 ? totalProtein / proteinCount : null,
+      avgCarbs: carbsCount > 0 ? totalCarbs / carbsCount : null,
+      avgFat: fatCount > 0 ? totalFat / fatCount : null,
+      totalWater: totalWater > 0 ? totalWater : null,
       count: diets.length
     })
   } catch (error) {

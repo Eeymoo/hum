@@ -7,7 +7,7 @@ const sleep = new Command('sleep')
 
 sleep
   .command('add')
-  .requiredOption('--duration <value>', 'Sleep duration in hours')
+  .option('--duration <value>', 'Sleep duration in hours')
   .requiredOption('--bedtime <time>', 'Bedtime (HH:mm)')
   .requiredOption('--waketime <time>', 'Wake time (HH:mm)')
   .requiredOption('--quality <value>', 'Sleep quality 1-10')
@@ -15,13 +15,27 @@ sleep
   .option('--rem-sleep <value>', 'REM sleep duration in hours')
   .option('--awakenings <value>', 'Number of awakenings')
   .option('--feeling <value>', 'Feeling 1-10')
+  .option('--extra-data <json>', 'Extra data (JSON string)')
   .option('--note <note>', 'Note')
   .option('--date <date>', 'Date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
   .action(async (options) => {
     try {
+      let duration = options.duration
+      if (!duration && options.bedtime && options.waketime) {
+        const [bh, bm] = options.bedtime.split(':').map(Number)
+        const [wh, wm] = options.waketime.split(':').map(Number)
+        let diff = (wh * 60 + wm) - (bh * 60 + bm)
+        if (diff < 0) diff += 24 * 60
+        duration = (diff / 60).toFixed(1)
+      }
+      if (!duration) {
+        console.error('需要 --duration 或同时提供 --bedtime 和 --waketime')
+        process.exit(1)
+      }
+
       const formData = createFormData({
-        duration: options.duration,
+        duration,
         bedTime: options.bedtime,
         wakeTime: options.waketime,
         quality: options.quality,
@@ -29,6 +43,7 @@ sleep
         remSleep: options.remSleep,
         awakenings: options.awakenings,
         feeling: options.feeling,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date)
       }, options.file || [])
@@ -104,6 +119,7 @@ sleep
   .option('--rem-sleep <value>', 'Updated REM sleep')
   .option('--awakenings <value>', 'Updated number of awakenings')
   .option('--feeling <value>', 'Updated feeling')
+  .option('--extra-data <json>', 'Updated extra data (JSON string)')
   .option('--note <note>', 'Updated note')
   .option('--date <date>', 'Updated date (YYYY-MM-DD or ISO 8601 datetime)')
   .option('--file <paths...>', 'File paths to attach')
@@ -119,6 +135,7 @@ sleep
         remSleep: options.remSleep,
         awakenings: options.awakenings,
         feeling: options.feeling,
+        extraData: options.extraData,
         note: options.note,
         date: appendTimezoneOffset(options.date),
         replaceAttachments: options.replaceAttachments ? 'true' : undefined

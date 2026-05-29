@@ -8,6 +8,7 @@ import timeline from '../src/commands/timeline.js'
 import weight from '../src/commands/weight.js'
 import exercise from '../src/commands/exercise.js'
 import diet from '../src/commands/diet.js'
+import food from '../src/commands/food.js'
 import sleep from '../src/commands/sleep.js'
 import { checkVersion, getCliVersion } from '../src/lib/version-check.js'
 
@@ -32,6 +33,7 @@ program.addCommand(timeline)
 program.addCommand(weight)
 program.addCommand(exercise)
 program.addCommand(diet)
+program.addCommand(food)
 program.addCommand(sleep)
 
 program.parse()
