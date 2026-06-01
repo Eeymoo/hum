@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     const change = first && lastRecord ? lastRecord.weight - first.weight : null
 
     return NextResponse.json({
-      trend: weights.map(w => ({
+      trend: weights.map((w: { date: Date; weight: number; bodyFat: number | null }) => ({
         date: w.date.toISOString().split('T')[0],
         weight: w.weight,
         bodyFat: w.bodyFat
