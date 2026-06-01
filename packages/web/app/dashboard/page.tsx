@@ -69,8 +69,8 @@ export default async function DashboardPage() {
   const t = await getTranslations('dashboard')
   const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(userId)
 
-  const totalExerciseDuration = todayExercises.reduce((sum, e) => sum + e.duration, 0)
-  const totalCalories = todayDiets.reduce((sum, d) => sum + (d.calories || 0), 0)
+  const totalExerciseDuration = todayExercises.reduce((sum: number, e: { duration: number }) => sum + e.duration, 0)
+  const totalCalories = todayDiets.reduce((sum: number, d: { calories: number | null }) => sum + (d.calories || 0), 0)
 
   return (
     <div className="px-4 py-6 sm:px-0">
