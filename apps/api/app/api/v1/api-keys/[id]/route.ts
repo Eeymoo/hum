@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, verifyWriteAuth } from '@/lib/auth'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await verifyAuth(request)
+  const authResult = await verifyWriteAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

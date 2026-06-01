@@ -21,7 +21,7 @@ export async function verifyApiKey(authHeader: string | null | undefined) {
   return apiKey
 }
 
-// 同时支持 API Key 和 Session 认证
+// 同时支持 API Key、Session 和 Share Token 认证
 export async function verifyAuth(request: Request) {
   // 先尝试 API Key 认证
   const authHeader = request.headers.get('authorization')
@@ -40,6 +40,30 @@ export async function verifyAuth(request: Request) {
   } catch {
     // Session 验证失败
   }
+
+  // 尝试 Share Token 认证（只读）
+  try {
+    const url = new URL(request.url)
+    const shareToken = url.searchParams.get('token')
+    if (shareToken) {
+      const token = await prisma.shareToken.findUnique({
+        where: { token: shareToken, deleteAt: 0 }
+      })
+      if (token && token.isActive) {
+        return { type: 'shareToken' as const, userId: token.userId, readOnly: true }
+      }
+    }
+  } catch {
+    // Share Token 验证失败
+  }
   
   return null
+}
+
+// 写操作认证 - 拒绝只读 share token
+export async function verifyWriteAuth(request: Request) {
+  const authResult = await verifyAuth(request)
+  if (!authResult) return null
+  if ('readOnly' in authResult && authResult.readOnly) return null
+  return authResult
 }

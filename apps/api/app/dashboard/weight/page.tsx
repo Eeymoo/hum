@@ -9,6 +9,8 @@ import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
 import WeightCalendarHeatmap from '@/app/components/WeightCalendarHeatmap'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 
 interface TimeRange {
   last?: string
@@ -36,6 +38,8 @@ export default function WeightPage() {
   const t = useTranslations('weight')
   const tc = useTranslations('common')
   const { formatDateTime, appendTimezoneOffset } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
+  const { isReadOnly } = useReadOnly()
   const [weights, setWeights] = useState<WeightRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,9 +75,9 @@ export default function WeightPage() {
       if (timeRange.end) statsParams.set('end', timeRange.end)
 
       const [weightsRes, statsRes, settingsRes] = await Promise.all([
-        fetch(`/api/v1/weights?${params}`),
-        fetch(`/api/v1/weights/stats?${statsParams}`),
-        fetch('/api/v1/settings')
+        readOnlyFetch(`/api/v1/weights?${params}`),
+        readOnlyFetch(`/api/v1/weights/stats?${statsParams}`),
+        readOnlyFetch('/api/v1/settings')
       ])
 
       if (weightsRes.ok) {
@@ -122,7 +126,7 @@ export default function WeightPage() {
     }
 
     try {
-      const res = await fetch('/api/v1/weights', {
+      const res = await readOnlyFetch('/api/v1/weights', {
         method: 'POST',
         body: formDataToSend
       })
@@ -193,12 +197,14 @@ export default function WeightPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-        >
-          {showForm ? tc('cancel') : t('addWeight')}
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+          >
+            {showForm ? tc('cancel') : t('addWeight')}
+          </button>
+        )}
       </div>
 
       <div className="mb-6">

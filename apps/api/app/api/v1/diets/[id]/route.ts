@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, verifyWriteAuth } from '@/lib/auth'
 import { saveFile, validateFile, deleteFile } from '@/lib/file'
 import { parseFoods } from '@/lib/utils'
 
@@ -42,7 +42,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const authResult = await verifyAuth(request)
+  const authResult = await verifyWriteAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -111,7 +111,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const authResult = await verifyAuth(request)
+  const authResult = await verifyWriteAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

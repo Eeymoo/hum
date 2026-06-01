@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
 import Card from '@/app/components/Card'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 
 interface Props {
   year: number
@@ -21,6 +22,7 @@ interface CalendarData {
 
 export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
   const t = useTranslations('weight')
+  const readOnlyFetch = useReadOnlyFetch()
   const [data, setData] = useState<CalendarData | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentYear, setCurrentYear] = useState(year)
@@ -29,7 +31,7 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
     async function fetchCalendar() {
       setLoading(true)
       try {
-        const res = await fetch(`/api/v1/weights/calendar?year=${currentYear}`)
+        const res = await readOnlyFetch(`/api/v1/weights/calendar?year=${currentYear}`)
         if (res.ok) {
           const json = await res.json()
           setData(json)

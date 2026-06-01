@@ -8,6 +8,8 @@ import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import Card from '@/app/components/Card'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 
 interface TimeRange {
   last?: string
@@ -40,6 +42,8 @@ export default function DietPage() {
   const t = useTranslations('diet')
   const tc = useTranslations('common')
   const { formatDateTime, appendTimezoneOffset } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
+  const { isReadOnly } = useReadOnly()
   const [diets, setDiets] = useState<DietRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -77,8 +81,8 @@ export default function DietPage() {
       if (timeRange.end) statsParams.set('end', timeRange.end)
 
       const [dietsRes, statsRes] = await Promise.all([
-        fetch(`/api/v1/diets?${params}`),
-        fetch(`/api/v1/diets/stats?${statsParams}`)
+        readOnlyFetch(`/api/v1/diets?${params}`),
+        readOnlyFetch(`/api/v1/diets/stats?${statsParams}`)
       ])
 
       if (dietsRes.ok) {
@@ -124,7 +128,7 @@ export default function DietPage() {
     }
 
     try {
-      const res = await fetch('/api/v1/diets', {
+      const res = await readOnlyFetch('/api/v1/diets', {
         method: 'POST',
         body: formDataToSend
       })
@@ -210,12 +214,14 @@ export default function DietPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-        >
-          {showForm ? tc('cancel') : t('logMeal')}
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+          >
+            {showForm ? tc('cancel') : t('logMeal')}
+          </button>
+        )}
       </div>
 
       <div className="mb-6">

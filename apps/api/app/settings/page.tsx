@@ -6,6 +6,7 @@ import Card from '@/app/components/Card'
 import { ExportButton } from './ExportButton'
 import TimezoneSettings from './TimezoneSettings'
 import TargetWeightSettings from './TargetWeightSettings'
+import ShareSettings from './share/ShareSettings'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -51,6 +52,8 @@ export default async function SettingsPage() {
         <TimezoneSettings />
 
         <TargetWeightSettings />
+
+        <ShareSettings />
 
         <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('apiKeys')}</h2>

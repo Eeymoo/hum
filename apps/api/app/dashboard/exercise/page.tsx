@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -39,6 +41,8 @@ export default function ExercisePage() {
   const t = useTranslations('exercise')
   const tc = useTranslations('common')
   const { formatDateTime, appendTimezoneOffset } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
+  const { isReadOnly } = useReadOnly()
   const [exercises, setExercises] = useState<ExerciseRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -75,8 +79,8 @@ export default function ExercisePage() {
       if (timeRange.end) statsParams.set('end', timeRange.end)
 
       const [exercisesRes, statsRes] = await Promise.all([
-        fetch(`/api/v1/exercises?${params}`),
-        fetch(`/api/v1/exercises/stats?${statsParams}`)
+        readOnlyFetch(`/api/v1/exercises?${params}`),
+        readOnlyFetch(`/api/v1/exercises/stats?${statsParams}`)
       ])
 
       if (exercisesRes.ok) {
@@ -121,7 +125,7 @@ export default function ExercisePage() {
     }
 
     try {
-      const res = await fetch('/api/v1/exercises', {
+      const res = await readOnlyFetch('/api/v1/exercises', {
         method: 'POST',
         body: formDataToSend
       })
@@ -196,12 +200,14 @@ export default function ExercisePage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-        >
-          {showForm ? tc('cancel') : t('logExercise')}
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+          >
+            {showForm ? tc('cancel') : t('logExercise')}
+          </button>
+        )}
       </div>
 
       <div className="mb-6">

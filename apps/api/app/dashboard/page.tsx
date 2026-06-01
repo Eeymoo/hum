@@ -4,6 +4,22 @@ import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
+import { headers } from 'next/headers'
+
+async function getUserId(): Promise<string | null> {
+  const session = await auth()
+  if (session?.user?.id) return session.user.id
+
+  const headersList = await headers()
+  const shareToken = headersList.get('x-share-token')
+  if (shareToken) {
+    const token = await prisma.shareToken.findUnique({
+      where: { token: shareToken, deleteAt: 0 }
+    })
+    if (token?.isActive) return token.userId
+  }
+  return null
+}
 
 async function getTodayData(userId: string) {
   const today = new Date()
@@ -45,13 +61,13 @@ async function getTodayData(userId: string) {
 }
 
 export default async function DashboardPage() {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const userId = await getUserId()
+  if (!userId) {
     redirect('/login')
   }
 
   const t = await getTranslations('dashboard')
-  const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(session.user.id)
+  const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(userId)
 
   const totalExerciseDuration = todayExercises.reduce((sum, e) => sum + e.duration, 0)
   const totalCalories = todayDiets.reduce((sum, d) => sum + (d.calories || 0), 0)

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
 
@@ -25,6 +26,7 @@ export default function TimelinePage() {
   const t = useTranslations('timeline')
   const tc = useTranslations('common')
   const { formatDateTime } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
   const [items, setItems] = useState<TimelineItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +45,7 @@ export default function TimelinePage() {
       if (timeRange.start) params.set('start', timeRange.start)
       if (timeRange.end) params.set('end', timeRange.end)
 
-      const res = await fetch(`/api/v1/timeline?${params}`)
+      const res = await readOnlyFetch(`/api/v1/timeline?${params}`)
       if (res.ok) {
         const data = await res.json()
         const fetched = data.items || []

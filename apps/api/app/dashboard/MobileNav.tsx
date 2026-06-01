@@ -5,13 +5,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
-export default function MobileNav() {
+export default function MobileNav({ readOnlyToken }: { readOnlyToken?: string }) {
   const t = useTranslations('nav')
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
-  const navLinks = [
+  let navLinks = [
     { href: '/dashboard', label: t('dashboard') },
     { href: '/dashboard/weight', label: t('weight') },
     { href: '/dashboard/exercise', label: t('exercise') },
@@ -19,9 +19,22 @@ export default function MobileNav() {
     { href: '/dashboard/sleep', label: t('sleep') },
     { href: '/dashboard/timeline', label: t('timeline') },
     { href: '/dashboard/records', label: t('records') },
-    { href: '/dashboard/api-keys', label: t('apiKeys') },
-    { href: '/settings', label: t('settings') },
   ]
+
+  if (!readOnlyToken) {
+    navLinks = [
+      ...navLinks,
+      { href: '/dashboard/api-keys', label: t('apiKeys') },
+      { href: '/settings', label: t('settings') },
+    ]
+  }
+
+  if (readOnlyToken) {
+    navLinks = navLinks.map(link => ({
+      ...link,
+      href: `${link.href}?token=${readOnlyToken}`
+    }))
+  }
 
   // Close on route change
   useEffect(() => {

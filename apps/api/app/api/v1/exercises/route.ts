@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma, { deserializeArray, serializeArray } from '@/lib/prisma'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, verifyWriteAuth } from '@/lib/auth'
 import { saveFile, validateFile } from '@/lib/file'
 import { parseDateRange, parseActivities } from '@/lib/utils'
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await verifyAuth(request)
+  const authResult = await verifyWriteAuth(request)
   if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

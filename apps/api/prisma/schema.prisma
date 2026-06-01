@@ -23,6 +23,7 @@ model User {
   diets         Diet[]
   sleeps        Sleep[]
   settings      UserSetting[]
+  shareTokens   ShareToken[]
   deleteAt      Int       @default(0)
 
   @@map("users")
@@ -182,6 +183,37 @@ model UserSetting {
 
   @@unique([userId, key])
   @@map("user_settings")
+}
+
+model ShareToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  name      String    @default("Read-only Share")
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  lastUsed  DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  viewLogs  ViewLog[]
+  deleteAt  Int       @default(0)
+
+  @@map("share_tokens")
+}
+
+model ViewLog {
+  id           String     @id @default(uuid())
+  shareTokenId String
+  token        String
+  ip           String?
+  userAgent    String?
+  path         String?
+  createdAt    DateTime   @default(now())
+  shareToken   ShareToken @relation(fields: [shareTokenId], references: [id], onDelete: Cascade)
+
+  @@index([shareTokenId])
+  @@index([createdAt])
+  @@map("view_logs")
 }
 
 model DeviceCode {

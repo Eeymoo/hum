@@ -7,6 +7,8 @@ import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 
 interface TimeRange {
   last?: string
@@ -28,6 +30,8 @@ export default function RecordsPage() {
   const t = useTranslations('records')
   const tc = useTranslations('common')
   const { formatDateTime, appendTimezoneOffset } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
+  const { isReadOnly } = useReadOnly()
   const [records, setRecords] = useState<Record[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +60,7 @@ export default function RecordsPage() {
       if (timeRange.start) params.set('start', timeRange.start)
       if (timeRange.end) params.set('end', timeRange.end)
 
-      const res = await fetch(`/api/v1/records?${params}`)
+      const res = await readOnlyFetch(`/api/v1/records?${params}`)
       if (res.ok) {
         const data = await res.json()
         setRecords(data.records || [])
@@ -94,7 +98,7 @@ export default function RecordsPage() {
         body.date = appendTimezoneOffset(formData.date)
       }
 
-      const res = await fetch('/api/v1/records', {
+      const res = await readOnlyFetch('/api/v1/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -119,7 +123,7 @@ export default function RecordsPage() {
     if (!confirm(t('deleteConfirm'))) return
 
     try {
-      const res = await fetch(`/api/v1/records/${id}`, { method: 'DELETE' })
+      const res = await readOnlyFetch(`/api/v1/records/${id}`, { method: 'DELETE' })
       if (res.ok) {
         setRecords(records.filter(r => r.id !== id))
       }
@@ -165,12 +169,14 @@ export default function RecordsPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <button
-          onClick={() => { setShowForm(!showForm); setSubmitError(null) }}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-        >
-          {showForm ? tc('cancel') : t('newRecord')}
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => { setShowForm(!showForm); setSubmitError(null) }}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+          >
+            {showForm ? tc('cancel') : t('newRecord')}
+          </button>
+        )}
       </div>
 
       <div className="mb-6">
@@ -280,12 +286,14 @@ export default function RecordsPage() {
                     {formatDateTime(record.date)}
                   </div>
                 </Link>
-                <button
-                  onClick={(e) => { e.preventDefault(); deleteRecord(record.id) }}
-                  className="ml-4 text-red-600 hover:text-red-800 text-sm"
-                >
-                  {tc('delete')}
-                </button>
+                {!isReadOnly && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); deleteRecord(record.id) }}
+                    className="ml-4 text-red-600 hover:text-red-800 text-sm"
+                  >
+                    {tc('delete')}
+                  </button>
+                )}
               </div>
             </li>
           ))}

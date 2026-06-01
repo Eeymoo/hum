@@ -8,6 +8,8 @@ import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import Card from '@/app/components/Card'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 
 interface TimeRange {
   last?: string
@@ -38,6 +40,8 @@ export default function SleepPage() {
   const t = useTranslations('sleep')
   const tc = useTranslations('common')
   const { formatDateTime, formatDate, appendTimezoneOffset } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
+  const { isReadOnly } = useReadOnly()
   const [sleeps, setSleeps] = useState<SleepRecord[]>([])
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -75,8 +79,8 @@ export default function SleepPage() {
       if (timeRange.end) statsParams.set('end', timeRange.end)
 
       const [sleepsRes, statsRes] = await Promise.all([
-        fetch(`/api/v1/sleeps?${params}`),
-        fetch(`/api/v1/sleeps/stats?${statsParams}`)
+        readOnlyFetch(`/api/v1/sleeps?${params}`),
+        readOnlyFetch(`/api/v1/sleeps/stats?${statsParams}`)
       ])
 
       if (sleepsRes.ok) {
@@ -122,7 +126,7 @@ export default function SleepPage() {
     }
 
     try {
-      const res = await fetch('/api/v1/sleeps', {
+      const res = await readOnlyFetch('/api/v1/sleeps', {
         method: 'POST',
         body: formDataToSend
       })
@@ -196,12 +200,14 @@ export default function SleepPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-        >
-          {showForm ? tc('cancel') : t('logSleep')}
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+          >
+            {showForm ? tc('cancel') : t('logSleep')}
+          </button>
+        )}
       </div>
 
       <div className="mb-6">
