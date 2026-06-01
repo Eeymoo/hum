@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "api_keys" ADD COLUMN "deleteAt" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "records" ADD COLUMN "deleteAt" INTEGER NOT NULL DEFAULT 0;
