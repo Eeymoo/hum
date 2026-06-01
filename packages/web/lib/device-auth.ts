@@ -1,6 +1,6 @@
 import prisma from './prisma'
 
-export async function storeAccessToken(token: string, userId: string, expiresIn: number = 3600000) {
+export async function storeAccessToken(token: string, userId: string, expiresIn: number = 1209600000) {
   await prisma.accessToken.create({
     data: {
       token,
