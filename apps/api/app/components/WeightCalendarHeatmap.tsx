@@ -88,7 +88,7 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
     },
     visualMap: {
       seriesIndex: 0,
-      type: 'continuous',
+      type: 'continuous' as const,
       min: -1.2,
       max: 1.2,
       inRange: {
@@ -125,8 +125,8 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
     },
     series: [
       {
-        type: 'heatmap',
-        coordinateSystem: 'calendar',
+        type: 'heatmap' as const,
+        coordinateSystem: 'calendar' as const,
         data: heatmapData
       }
     ]
