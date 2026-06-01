@@ -68,7 +68,22 @@ git commit -m "更新版本号至 vX.X.X"
 
 如果 version 已经与目标一致，跳过此步骤。
 
-### 5. 推送前校验
+### 5. 检查数据库迁移完整性
+
+项目同时维护两套迁移目录：`migrations_sqlite` 和 `migrations_postgresql`。Schema 变更后容易遗漏某一套迁移，导致线上数据库缺少表或字段。
+
+**检查步骤：**
+
+```bash
+# 对比两套迁移目录的迁移名称是否一致
+diff <(ls apps/api/prisma/migrations_sqlite/) <(ls apps/api/prisma/migrations_postgresql/)
+```
+
+- 如果输出为空，说明两套迁移一致，继续下一步
+- 如果有差异，**停止发布流程**，检查差异对应的 schema 变更，为缺少迁移的数据库类型补充迁移文件
+- 特别注意：新增 model 或新增字段时，必须同时在两套迁移目录中各创建一个迁移
+
+### 6. 推送前校验
 
 在推送 tag 之前，**必须**执行构建校验，确保代码不存在类型错误或编译问题，避免推送到远端后 CI 构建失败。
 
@@ -81,7 +96,7 @@ cd apps/api && npm run build
 - 如果构建失败，**停止发布流程**，向用户报告错误信息，提示修复后重试
 - 不要跳过此步骤，即使用户要求跳过
 
-### 6. 创建并推送 tag
+### 7. 创建并推送 tag
 
 ```bash
 git tag vX.X.X
@@ -97,3 +112,4 @@ git push origin main --tags
 - 如果所有 version 已一致且无需提交，直接创建 tag 并推送
 - 发布前必须确保工作区干净，未提交的变更不允许发布
 - **推送前必须通过构建校验**，构建失败不允许推送
+- **推送前必须检查数据库迁移完整性**，`migrations_sqlite` 和 `migrations_postgresql` 必须同步，防止线上数据库缺少表或字段
