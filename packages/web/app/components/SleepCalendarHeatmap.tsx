@@ -1,176 +1,215 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
 import Card from '@/app/components/Card'
-
-interface DailyScore {
-  date: string
-  wakeTime: string
-  wakeHours: number
-}
-
-interface ConsistencyData {
-  year: number
-  month: number
-  weekdayAvg: string | null
-  weekendAvg: string | null
-  weekdayCount: number
-  weekendCount: number
-  consistencyScore: number | null
-  dailyScores: DailyScore[]
-}
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 
 interface Props {
-  data: ConsistencyData
   year: number
-  month: number
-  onMonthChange: (year: number, month: number) => void
 }
 
-export default function SleepCalendarHeatmap({ data, year, month, onMonthChange }: Props) {
+interface CalendarData {
+  data: Array<[string, number | null, number]>
+  summary: {
+    totalRecords: number
+    avgScore: number | null
+  }
+  year: number
+}
+
+export default function SleepCalendarHeatmap({ year }: Props) {
   const t = useTranslations('sleep')
+  const readOnlyFetch = useReadOnlyFetch()
+  const [data, setData] = useState<CalendarData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentYear, setCurrentYear] = useState(year)
+  const [expanded, setExpanded] = useState(false)
 
-  // 当月天数
-  const daysInMonth = new Date(year, month, 0).getDate()
-
-  // 计算工作日平均起床时间（作为基准）
-  const weekdayAvg = data.weekdayAvg
-    ? data.weekdayAvg.split(':').map(Number).reduce((h, m) => h + m / 60)
-    : null
-
-  // 构建热力图数据
-  const scoreMap = new Map(data.dailyScores.map(d => [d.date, d]))
-
-  const heatmapData: [number, number, number][] = []
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    const dayData = scoreMap.get(dateStr)
-    const dayOfWeek = new Date(year, month - 1, day).getDay()
-
-    // 计算偏差分钟数
-    let deviation = -1  // -1 表示无数据
-    if (dayData && weekdayAvg !== null) {
-      deviation = Math.abs(dayData.wakeHours - weekdayAvg) * 60  // 转为分钟
+  useEffect(() => {
+    async function fetchCalendar() {
+      setLoading(true)
+      try {
+        const res = await readOnlyFetch(`/api/v1/sleeps/calendar?year=${currentYear}`)
+        if (res.ok) {
+          const json = await res.json()
+          setData(json)
+        }
+      } catch (error) {
+        console.error('Failed to fetch sleep calendar data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchCalendar()
+  }, [currentYear])
 
-    // 计算颜色值：0=深绿, 1=浅绿, 2=白, 3=浅红, 4=深红, -1=灰
-    let colorValue: number
-    if (deviation < 0) {
-      colorValue = -1  // 无数据
-    } else if (deviation <= 15) {
-      colorValue = 0   // 深绿
-    } else if (deviation <= 30) {
-      colorValue = 1   // 浅绿
-    } else if (deviation <= 60) {
-      colorValue = 2   // 白色
-    } else if (deviation <= 90) {
-      colorValue = 3   // 浅红
-    } else {
-      colorValue = 4   // 深红
-    }
-
-    heatmapData.push([day, dayOfWeek, colorValue])
+  function handlePrevYear() {
+    setCurrentYear(y => y - 1)
   }
 
-  // ECharts 配置
-  const option: import('echarts').EChartsOption = {
+  function handleNextYear() {
+    setCurrentYear(y => y + 1)
+  }
+
+  if (loading) {
+    return (
+      <Card className="mb-6">
+        <div className="animate-pulse bg-gray-200 rounded h-6 w-48 mb-4"></div>
+        <div className="animate-pulse bg-gray-200 rounded h-64 w-full"></div>
+      </Card>
+    )
+  }
+
+  if (!data || data.data.length === 0) {
+    return (
+      <Card className="mb-6">
+        <h2 className="text-lg font-medium mb-4">{t('consistencyTitle')}</h2>
+        <div className="text-center text-gray-400 py-12">{t('noRecords')}</div>
+      </Card>
+    )
+  }
+
+  // 用一致性评分做热力图数据
+  const heatmapData = data.data
+    .filter(([, score]) => score !== null)
+    .map(([date, score]) => [date, score])
+
+  const LEGEND_COLORS = [
+    { key: 'sleepLegendDeepGreen', color: '#16A34A' },
+    { key: 'sleepLegendLightGreen', color: '#4ADE80' },
+    { key: 'sleepLegendYellow', color: '#FACC15' },
+    { key: 'sleepLegendOrange', color: '#FB923C' },
+    { key: 'sleepLegendRed', color: '#DC2626' },
+  ]
+
+  const option = {
     tooltip: {
       formatter: (params: any) => {
-        const day = params.value[0]
-        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-        const dayData = scoreMap.get(dateStr)
-        const dayOfWeek = new Date(year, month - 1, day).getDay()
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-        if (!dayData) {
-          return `${month}月${day}日${isWeekend ? '（周末）' : ''}<br/>无数据`
+        if (!params.data) return ''
+        const [date, score] = params.data
+        // 从原始数据中找到对应的 duration
+        const entry = data.data.find((d) => d[0] === date)
+        const duration = entry ? entry[2] : null
+        const dateStr = date as string
+        const scoreVal = score as number
+        let lines = `${dateStr}<br/>${t('consistencyScore')}: ${scoreVal}/7`
+        if (duration !== null) {
+          lines += `<br/>${t('duration')}: ${duration}h`
         }
-        const deviation = weekdayAvg !== null
-          ? Math.round(Math.abs(dayData.wakeHours - weekdayAvg) * 60)
-          : 0
-        return `${month}月${day}日${isWeekend ? '（周末）' : ''}<br/>起床: ${dayData.wakeTime}<br/>偏差: ${deviation}分钟`
+        return lines
       }
-    },
-    grid: { top: 10, right: 20, bottom: 10, left: 30 },
-    xAxis: {
-      type: 'category',
-      data: Array.from({ length: daysInMonth }, (_, i) => i + 1),
-      splitArea: { show: true },
-      axisLabel: { fontSize: 10 }
-    },
-    yAxis: {
-      type: 'category',
-      data: ['日', '一', '二', '三', '四', '五', '六'],
-      splitArea: { show: true }
     },
     visualMap: {
-      min: -1,
-      max: 4,
-      categories: ['无数据', '深绿', '浅绿', '白色', '浅红', '深红'],
+      seriesIndex: 0,
+      type: 'continuous' as const,
+      min: 0,
+      max: 7,
       inRange: {
-        color: ['#e5e7eb', '#22c55e', '#86efac', '#ffffff', '#fca5a5', '#ef4444']
+        color: ['#DC2626', '#FB923C', '#FACC15', '#4ADE80', '#16A34A']
       },
+      orient: 'horizontal' as const,
+      left: 'center',
+      bottom: 0,
       show: false
     },
-    series: [{
-      type: 'heatmap',
-      data: heatmapData,
-      label: {
-        show: true,
-        formatter: (params: any) => {
-          const day = params.value[0]
-          return String(day)
-        },
+    calendar: {
+      top: 20,
+      left: 60,
+      right: 20,
+      bottom: 30,
+      range: currentYear,
+      cellSize: 15,
+      splitLine: { show: false },
+      itemStyle: {
+        borderWidth: 1,
+        borderColor: '#fff',
+        color: '#D1D5DB'
+      },
+      yearLabel: { show: false },
+      dayLabel: {
+        firstDay: 1,
+        color: '#9CA3AF',
         fontSize: 10
       },
-      emphasis: {
-        itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' }
+      monthLabel: {
+        color: '#9CA3AF',
+        fontSize: 11
       }
-    }]
-  }
-
-  // 月份导航
-  const prevMonth = () => {
-    if (month === 1) {
-      onMonthChange(year - 1, 12)
-    } else {
-      onMonthChange(year, month - 1)
-    }
-  }
-  const nextMonth = () => {
-    if (month === 12) {
-      onMonthChange(year + 1, 1)
-    } else {
-      onMonthChange(year, month + 1)
-    }
+    },
+    series: [
+      {
+        type: 'heatmap' as const,
+        coordinateSystem: 'calendar' as const,
+        data: heatmapData
+      }
+    ]
   }
 
   return (
     <Card className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="px-3 py-1 border rounded hover:bg-gray-50">◀</button>
-        <h3 className="text-lg font-semibold">{year}年{month}月</h3>
-        <button onClick={nextMonth} className="px-3 py-1 border rounded hover:bg-gray-50">▶</button>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-medium text-gray-900">
+          {t('consistencyTitle')}
+        </h2>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrevYear} className="px-2 py-1 text-sm border rounded hover:bg-gray-50">◀</button>
+          <span className="text-sm font-medium">{currentYear}</span>
+          <button onClick={handleNextYear} className="px-2 py-1 text-sm border rounded hover:bg-gray-50">▶</button>
+        </div>
       </div>
-      <ReactECharts option={option} style={{ height: 300 }} />
 
-      {/* 图例 */}
-      <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-        <span className="text-gray-500">{t('legend')}:</span>
-        <span className="inline-block w-3 h-3 bg-green-600 rounded" />
-        <span>{t('legendDeepGreen')}</span>
-        <span className="inline-block w-3 h-3 bg-green-300 rounded" />
-        <span>{t('legendLightGreen')}</span>
-        <span className="inline-block w-3 h-3 bg-white border rounded" />
-        <span>{t('legendWhite')}</span>
-        <span className="inline-block w-3 h-3 bg-red-300 rounded" />
-        <span>{t('legendLightRed')}</span>
-        <span className="inline-block w-3 h-3 bg-red-500 rounded" />
-        <span>{t('legendDeepRed')}</span>
-        <span className="inline-block w-3 h-3 bg-gray-200 rounded" />
-        <span>{t('legendNoData')}</span>
+      <div className="text-xs text-gray-400 mb-1">
+        {t('consistencyFormula')}: 7 - |{t('weekdayAvg')} - {t('weekendAvg')}|
       </div>
+
+      <ReactECharts
+        option={option}
+        style={{ height: 180 }}
+      />
+
+      <div className="flex gap-4 text-xs text-gray-400">
+        <span>{data.summary.totalRecords} {t('days')}</span>
+        {data.summary.avgScore !== null && (
+          <span className="text-emerald-600">
+            {t('consistencyScore')}: {data.summary.avgScore}/7
+          </span>
+        )}
+      </div>
+
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+      >
+        <span>{expanded ? '▲' : '▼'}</span>
+        {t('consistencyExplanationToggle')}
+      </button>
+
+      {expanded && (
+        <div className="mt-3 text-sm text-gray-600 bg-gray-50 rounded p-4 space-y-2">
+          <div className="font-medium mb-2">{t('consistencyExplanationTitle')}</div>
+          <div>1. {t('sleepCalendarRule1')}</div>
+          <div>2. {t('sleepCalendarRule2')}</div>
+          <div>3. {t('sleepCalendarRule3')}</div>
+          <div>4. {t('sleepCalendarRule4')}</div>
+
+          <div className="mt-3">
+            <div className="font-medium mb-2">{t('legend')}</div>
+            <div className="flex flex-wrap gap-4">
+              {LEGEND_COLORS.map(item => (
+                <div key={item.key} className="flex items-center gap-1">
+                  <span
+                    className="inline-block w-3 h-3 rounded-sm border border-gray-200"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-xs text-gray-600">{t(item.key)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

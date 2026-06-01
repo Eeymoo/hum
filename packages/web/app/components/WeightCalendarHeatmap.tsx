@@ -26,6 +26,7 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
   const [data, setData] = useState<CalendarData | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentYear, setCurrentYear] = useState(year)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     async function fetchCalendar() {
@@ -82,8 +83,6 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
     { key: 'legendLightRed', color: '#FCA5A5' },
     { key: 'legendDeepRed', color: '#DC2626' },
   ]
-
-  const [expanded, setExpanded] = useState(false)
 
   const option = {
     tooltip: {

@@ -16,7 +16,7 @@ auth
         console.log('Please visit:', deviceData.verificationUriComplete)
         console.log('Code:', deviceData.userCode)
         console.log('Waiting for authorization...')
-        
+
         const maxAttempts = 60
         for (let i = 0; i < maxAttempts; i++) {
           await new Promise(resolve => setTimeout(resolve, deviceData.interval * 1000))
@@ -28,10 +28,10 @@ auth
                 grantType: 'urn:ietf:params:oauth:grant-type:device_code'
               })
             })
-            
-            if (tokenData.accessToken) {
-              config.set('accessToken', tokenData.accessToken)
-              config.set('refreshToken', tokenData.refreshToken)
+
+            if (tokenData.access_token) {
+              config.set('accessToken', tokenData.access_token)
+              config.set('refreshToken', tokenData.refresh_token)
               console.log('Successfully logged in!')
               return
             }
@@ -45,6 +45,12 @@ auth
         const result = await request('/auth/verify', {
           method: 'POST',
           body: JSON.stringify({ apiKey })
+        }).catch(err => {
+          // verify 端点在 key 无效时返回 401，捕获后返回统一结构
+          if (err.message.includes('401')) {
+            return { valid: false }
+          }
+          throw err
         })
 
         if (result.valid) {

@@ -9,6 +9,7 @@ function yellowWarn(message) {
 export async function request(endpoint, options = {}) {
   const apiUrl = config.get('apiUrl') || 'http://localhost:3000'
   const apiKey = config.get('apiKey')
+  const accessToken = config.get('accessToken')
 
   if (apiUrl === 'http://localhost:3000') {
     yellowWarn('Warning: Using local API (http://localhost:3000). Ensure this is intended.')
@@ -23,8 +24,9 @@ export async function request(endpoint, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
 
-  if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`
+  const bearerToken = apiKey || accessToken
+  if (bearerToken) {
+    headers['Authorization'] = `Bearer ${bearerToken}`
   }
 
   const response = await fetch(url, {

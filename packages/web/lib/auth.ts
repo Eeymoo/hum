@@ -2,10 +2,11 @@ import prisma from './prisma'
 import { auth } from '@/auth'
 import bcrypt from 'bcryptjs'
 import { NextRequest } from 'next/server'
+import { validateAccessToken } from './device-auth'
 
 export interface AuthContext {
   userId: string
-  type: 'apiKey' | 'session' | 'shareToken'
+  type: 'apiKey' | 'session' | 'shareToken' | 'accessToken'
   readOnly: boolean
   source: 'header' | 'cookie' | 'param'
   tokenId?: string
@@ -42,6 +43,28 @@ async function _verifyApiKey(authHeader: string | null): Promise<AuthContext | n
   }
 
   return null
+}
+
+// 内部辅助：验证 Access Token（device flow 颁发）
+async function _verifyAccessToken(authHeader: string | null): Promise<AuthContext | null> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null
+  }
+
+  const token = authHeader.slice(7)
+
+  // 先尝试 API Key，如果匹配就跳过 access token 验证
+  // 避免和 _verifyApiKey 重复查询
+
+  const userId = await validateAccessToken(token)
+  if (!userId) return null
+
+  return {
+    userId,
+    type: 'accessToken',
+    readOnly: false,
+    source: 'header',
+  }
 }
 
 // 内部辅助：验证 Session
@@ -121,18 +144,22 @@ export async function getAuth(req: NextRequest): Promise<AuthResult> {
   const apiKeyAuth = await _verifyApiKey(authHeader)
   if (apiKeyAuth) return apiKeyAuth
 
-  // 2. Session
+  // 2. Access Token（device flow 颁发）
+  const accessTokenAuth = await _verifyAccessToken(authHeader)
+  if (accessTokenAuth) return accessTokenAuth
+
+  // 3. Session
   const sessionAuth = await _verifySession()
   if (sessionAuth) return sessionAuth
 
-  // 3. Share Token（优先 header）
+  // 4. Share Token（优先 header）
   const shareTokenHeader = req.headers.get('x-share-token')
   if (shareTokenHeader) {
     const shareAuth = await _verifyShareToken(shareTokenHeader, 'header', req)
     if (shareAuth) return shareAuth
   }
 
-  // 4. Share Token（兼容 URL param）
+  // 5. Share Token（兼容 URL param）
   const shareTokenParam = req.nextUrl.searchParams.get('token')
   if (shareTokenParam) {
     const shareAuth = await _verifyShareToken(shareTokenParam, 'param', req)
