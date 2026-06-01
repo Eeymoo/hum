@@ -1,5 +1,3 @@
--- AlterTable
-ALTER TABLE "api_keys" ADD COLUMN "deleteAt" INTEGER NOT NULL DEFAULT 0;
-
--- AlterTable
-ALTER TABLE "records" ADD COLUMN "deleteAt" INTEGER NOT NULL DEFAULT 0;
+-- This migration is a no-op because the init migration already includes the deleteAt columns.
+-- Originally this migration attempted to add deleteAt to api_keys and records,
+-- but those columns were already created in the init migration.

@@ -1,2 +1,1 @@
--- AlterTable
-ALTER TABLE "accounts" ADD COLUMN "password" TEXT;
+-- No-op: accounts.password column already exists in init migration.

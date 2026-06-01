@@ -62,6 +62,7 @@ RUN printf '%s\n' \
     '  echo "📦 Using pre-generated PostgreSQL Prisma Client"' \
     '  cp -r prisma-client-postgresql/* node_modules/.prisma/client/' \
     'fi' \
+    'node scripts/resolve-failed-migrations.js' \
     'npx prisma migrate deploy' \
     '' \
     'echo "🚀 Starting application..."' \
