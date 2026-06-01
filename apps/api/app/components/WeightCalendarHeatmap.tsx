@@ -94,7 +94,7 @@ export default function WeightCalendarHeatmap({ year, targetWeight }: Props) {
       inRange: {
         color: ['#16A34A', '#4ADE80', '#86EFAC', '#D1FAE5', '#F3F4F6', '#FEE2E2', '#FCA5A5', '#F87171', '#DC2626']
       },
-      orient: 'horizontal',
+      orient: 'horizontal' as const,
       left: 'center',
       bottom: 0,
       show: false
