@@ -75,7 +75,7 @@ export default function SleepCalendarHeatmap({ data, year, month, onMonthChange 
   }
 
   // ECharts 配置
-  const option = {
+  const option: import('echarts').EChartsOption = {
     tooltip: {
       formatter: (params: any) => {
         const day = params.value[0]
