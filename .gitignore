@@ -28,7 +28,7 @@ Thumbs.db
 *.db-journal
 
 # Uploads
-apps/api/uploads/
+packages/web/uploads/
 
 # Logs
 *.log

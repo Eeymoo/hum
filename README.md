@@ -6,18 +6,17 @@
 
 ```
 hum/
-├── apps/
-│   └── api/                       # Next.js 应用（Web 前端 + API 服务）
-│       ├── app/
-│       │   ├── api/v1/            # RESTful API 端点
-│       │   ├── dashboard/         # Web 数据管理面板
-│       │   ├── login/             # 登录页
-│       │   ├── register/          # 注册页
-│       │   └── settings/          # 设置页
-│       ├── lib/                   # 工具函数
-│       ├── prisma/                # 数据库 schema 和迁移
-│       └── messages/              # 国际化文件（中/英）
 ├── packages/
+│   ├── web/                       # Next.js 应用（Web 前端 + API 服务）
+│   │   ├── app/
+│   │   │   ├── api/v1/            # RESTful API 端点
+│   │   │   ├── dashboard/         # Web 数据管理面板
+│   │   │   ├── login/             # 登录页
+│   │   │   ├── register/          # 注册页
+│   │   │   └── settings/          # 设置页
+│   │   ├── lib/                   # 工具函数
+│   │   ├── prisma/                # 数据库 schema 和迁移
+│   │   └── messages/              # 国际化文件（中/英）
 │   └── cli/                       # 命令行工具
 ├── skills/                        # Agent Skills 扩展
 ├── docs/                          # 项目文档
@@ -48,7 +47,7 @@ hum/
 ### 1. 启动 API 服务
 
 ```bash
-cd apps/api
+cd packages/web
 npm install
 npx prisma migrate dev
 npm run dev
@@ -105,7 +104,7 @@ hum auth status
 ### API 服务
 
 ```bash
-cd apps/api
+cd packages/web
 npm run dev          # 开发模式
 npm run build        # 生产构建
 npm run start        # 生产启动
@@ -123,7 +122,7 @@ npm run test:e2e     # 运行端到端测试
 ### 数据库
 
 ```bash
-cd apps/api
+cd packages/web
 npx prisma generate       # 生成 Prisma Client
 npx prisma migrate dev    # 运行迁移
 npx prisma studio         # 打开数据库管理界面

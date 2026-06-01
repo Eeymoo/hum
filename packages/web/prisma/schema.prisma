@@ -1,0 +1,257 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String?   @unique
+  name          String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  apiKeys       ApiKey[]
+  records       Record[]
+  weights       Weight[]
+  exercises     Exercise[]
+  diets         Diet[]
+  sleeps        Sleep[]
+  settings      UserSetting[]
+  shareTokens   ShareToken[]
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  // 注意：此为 breaking change，需配合数据迁移脚本执行
+  deleteAt      Int       @default(0)
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String?
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  password          String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt          Int     @default(0)
+
+  @@map("accounts")
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  key       String    @unique
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt  Int       @default(0)
+
+  @@map("api_keys")
+}
+
+model Record {
+  id           String   @id @default(uuid())
+  userId       String?
+  type         String
+  data         String
+  tags         String?
+  note         String?
+  attachments  String?
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt     Int      @default(0)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([type, date])
+  @@index([createdAt])
+  @@map("records")
+}
+
+// TODO: JSON 字段类型优化 — 当前使用 String 存储 JSON，迁移到 PostgreSQL 时可将以下字段改为 @db.Json:
+//   Record.data, Record.tags, Record.attachments
+//   Weight.attachments, Weight.extraData
+//   Exercise.activities, Exercise.attachments, Exercise.extraData
+//   Diet.foods, Diet.attachments, Diet.extraData
+//   Sleep.attachments, Sleep.extraData
+// 注意：SQLite 不支持原生 JSON 类型，因此当前使用 String 是兼容方案。
+
+model Weight {
+  id          String   @id @default(uuid())
+  userId      String?
+  weight      Float
+  bodyFat     Float?
+  muscleMass  Float?
+  bmi         Float?
+  water       Float?
+  boneMass    Float?
+  visceralFat Int?
+  note        String?
+  attachments String?
+  extraData   String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@map("weights")
+}
+
+model Exercise {
+  id             String   @id @default(uuid())
+  userId         String?
+  type           String
+  duration       Int
+  caloriesBurned Int?
+  activities     String
+  heartRateAvg   Int?
+  heartRateMax   Int?
+  feeling        Int?
+  location       String?
+  note           String?
+  attachments    String?
+  extraData      String?
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt       Int      @default(0)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([type, date])
+  @@map("exercises")
+}
+
+model Diet {
+  id          String   @id @default(uuid())
+  userId      String?
+  mealType    String
+  calories    Int?
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  fiber       Float?
+  sodium      Float?
+  foods       String
+  water       Int?
+  note        String?
+  attachments String?
+  extraData   String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@map("diets")
+}
+
+model Sleep {
+  id          String   @id @default(uuid())
+  userId      String?
+  duration    Float
+  bedTime     String
+  wakeTime    String
+  quality     Int
+  deepSleep   Float?
+  remSleep    Float?
+  awakenings  Int?
+  feeling     Int?
+  note        String?
+  attachments String?
+  extraData   String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt    Int      @default(0)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@map("sleeps")
+}
+
+model UserSetting {
+  id     String @id @default(uuid())
+  userId String
+  key    String
+  value  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("user_settings")
+}
+
+model ShareToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  name      String    @default("Read-only Share")
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  lastUsed  DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  viewLogs  ViewLog[]
+  // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
+  deleteAt  Int       @default(0)
+
+  @@map("share_tokens")
+}
+
+model ViewLog {
+  id           String     @id @default(uuid())
+  shareTokenId String
+  token        String
+  ip           String?
+  userAgent    String?
+  path         String?
+  createdAt    DateTime   @default(now())
+  shareToken   ShareToken @relation(fields: [shareTokenId], references: [id], onDelete: Cascade)
+
+  @@index([shareTokenId])
+  @@index([createdAt])
+  @@map("view_logs")
+}
+
+model DeviceCode {
+  id         String    @id @default(uuid())
+  deviceCode String    @unique
+  userCode   String    @unique
+  status     String    @default("pending")
+  userId     String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+
+  @@map("device_codes")
+}
+
+model AccessToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("access_tokens")
+}

@@ -40,14 +40,15 @@ auth
           }
         }
         console.error('Authorization timeout')
-      } else if (options.apiKey) {
+      } else if (options.apiKey || process.env.HUM_API_KEY) {
+        const apiKey = options.apiKey || process.env.HUM_API_KEY
         const result = await request('/auth/verify', {
           method: 'POST',
-          body: JSON.stringify({ apiKey: options.apiKey })
+          body: JSON.stringify({ apiKey })
         })
 
         if (result.valid) {
-          config.set('apiKey', options.apiKey)
+          config.set('apiKey', apiKey)
           const parts = []
           if (result.user) parts.push(result.user)
           if (result.keyName) parts.push(`key: ${result.keyName}`)
@@ -56,7 +57,7 @@ auth
           console.error('Invalid API key')
         }
       } else {
-        console.error('Please provide --api-key or --device option')
+        console.error('Please provide --api-key or --device option, or set HUM_API_KEY environment variable')
       }
     } catch (error) {
       console.error('Login failed:', error.message)

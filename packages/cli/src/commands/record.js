@@ -29,9 +29,9 @@ record
         body: JSON.stringify(recordData)
       })
 
-      console.log('Record added:', result.id)
+      console.log('记录已添加:', result.id)
     } catch (error) {
-      console.error('Failed to add record:', error.message)
+      console.error('添加记录失败:', error.message)
     }
   })
 
@@ -53,7 +53,7 @@ record
       const result = await request(`/records?${params.toString()}`)
       outputData(result, { format: options.format, type: 'record-list', page })
     } catch (error) {
-      console.error('Failed to list records:', error.message)
+      console.error('获取记录列表失败:', error.message)
     }
   })
 
@@ -72,7 +72,7 @@ record
       const result = await request(`/records/${options.id}${queryString ? '?' + queryString : ''}`)
       outputData(result, { format: options.format, type: 'record-get' })
     } catch (error) {
-      console.error('Failed to get record:', error.message)
+      console.error('获取记录失败:', error.message)
     }
   })
 
@@ -98,9 +98,9 @@ record
         body: JSON.stringify(updateData)
       })
 
-      console.log('Record updated:', result.id)
+      console.log('记录已更新:', result.id)
     } catch (error) {
-      console.error('Failed to update record:', error.message)
+      console.error('更新记录失败:', error.message)
     }
   })
 
@@ -113,9 +113,9 @@ record
         method: 'DELETE'
       })
 
-      console.log('Record deleted')
+      console.log('记录已删除')
     } catch (error) {
-      console.error('Failed to delete record:', error.message)
+      console.error('删除记录失败:', error.message)
     }
   })
 
@@ -135,7 +135,7 @@ record
       const result = await request(`/records/search?${params.toString()}`)
       outputData(result, { format: options.format, type: 'record-list', page })
     } catch (error) {
-      console.error('Failed to search records:', error.message)
+      console.error('搜索记录失败:', error.message)
     }
   })
 

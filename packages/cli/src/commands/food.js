@@ -21,7 +21,7 @@ food
       const cleaned = items.map(({ rawItem, ...rest }) => rest)
       outputData({ foods: cleaned, totalPages: 1, total: cleaned.length }, { format: options.format, type: 'food-list' })
     } catch (error) {
-      console.error(error.message)
+      console.error('查询食物失败:', error.message)
       process.exitCode = 1
     }
   })

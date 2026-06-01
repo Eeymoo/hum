@@ -19,7 +19,7 @@ timeline
       const result = await request(`/timeline?${params.toString()}`)
       outputData(result, { format: options.format, type: 'timeline', page })
     } catch (error) {
-      console.error('Failed to get timeline:', error.message)
+      console.error('获取时间线失败:', error.message)
     }
   })
 

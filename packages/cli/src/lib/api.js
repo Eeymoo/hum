@@ -1,9 +1,18 @@
 import { readFileSync } from 'fs'
 import config from './config.js'
 
+function yellowWarn(message) {
+  // \x1b[33m 是黄色，\x1b[0m 是重置
+  console.warn('\x1b[33m%s\x1b[0m', message)
+}
+
 export async function request(endpoint, options = {}) {
   const apiUrl = config.get('apiUrl') || 'http://localhost:3000'
   const apiKey = config.get('apiKey')
+
+  if (apiUrl === 'http://localhost:3000') {
+    yellowWarn('Warning: Using local API (http://localhost:3000). Ensure this is intended.')
+  }
 
   const url = `${apiUrl}/api/v1${endpoint}`
   const headers = {
@@ -25,7 +34,7 @@ export async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `HTTP error! status: ${response.status}`)
+    throw new Error(error.message || `请求失败，状态码: ${response.status}`)
   }
 
   return response.json()

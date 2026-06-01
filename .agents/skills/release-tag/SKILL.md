@@ -1,11 +1,11 @@
 ---
 name: release-tag
-description: 在推送 git tag 前，将 apps/api/package.json 和 packages/cli/package.json 的 version 字段同步更新为与 tag 版本号一致。当用户想要发版、打 tag、创建 release、或提到版本号时使用此 skill。
+description: 在推送 git tag 前，将 packages/web/package.json 和 packages/cli/package.json 的 version 字段同步更新为与 tag 版本号一致。当用户想要发版、打 tag、创建 release、或提到版本号时使用此 skill。
 ---
 
 # Release Tag
 
-在推送 git tag 之前，自动同步 `apps/api/package.json` 和 `packages/cli/package.json` 的 `version` 字段，使其与目标版本号一致。
+在推送 git tag 之前，自动同步 `packages/web/package.json` 和 `packages/cli/package.json` 的 `version` 字段，使其与目标版本号一致。
 
 ## 使用场景
 
@@ -18,14 +18,14 @@ description: 在推送 git tag 前，将 apps/api/package.json 和 packages/cli/
 ### 1. 确认版本号
 
 - 如果用户明确指定了版本号，使用用户指定的版本
-- 如果用户未指定，读取 `apps/api/package.json` 的当前 `version` 作为目标版本号
+- 如果用户未指定，读取 `packages/web/package.json` 的当前 `version` 作为目标版本号
 - 向用户确认目标版本号，版本号必须符合 semver 格式
 
 ### 2. 检查当前状态
 
 ```bash
 # 读取当前版本
-grep '"version"' apps/api/package.json | head -1
+grep '"version"' packages/web/package.json | head -1
 grep '"version"' packages/cli/package.json | head -1
 
 # 检查是否已有同名 tag
@@ -52,7 +52,7 @@ git status --porcelain
 
 同时修改两个文件的 `version` 字段为目标版本号：
 
-- `apps/api/package.json`
+- `packages/web/package.json`
 - `packages/cli/package.json`
 
 仅修改 `version` 字段，不做其他改动。
@@ -62,7 +62,7 @@ git status --porcelain
 如果 version 字段有变动，提交变更：
 
 ```bash
-git add apps/api/package.json packages/cli/package.json
+git add packages/web/package.json packages/cli/package.json
 git commit -m "更新版本号至 vX.X.X"
 ```
 
@@ -76,7 +76,7 @@ git commit -m "更新版本号至 vX.X.X"
 
 ```bash
 # 对比两套迁移目录的迁移名称是否一致
-diff <(ls apps/api/prisma/migrations_sqlite/) <(ls apps/api/prisma/migrations_postgresql/)
+diff <(ls packages/web/prisma/migrations_sqlite/) <(ls packages/web/prisma/migrations_postgresql/)
 ```
 
 - 如果输出为空，说明两套迁移一致，继续下一步
@@ -89,7 +89,7 @@ diff <(ls apps/api/prisma/migrations_sqlite/) <(ls apps/api/prisma/migrations_po
 
 ```bash
 # 在 apps/api 目录下执行构建（包含类型检查）
-cd apps/api && npm run build
+cd packages/web && npm run build
 ```
 
 - 如果构建成功，继续下一步

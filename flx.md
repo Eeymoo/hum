@@ -4,7 +4,7 @@
 
 ### 涉及文件
 
-- `apps/api/lib/utils.ts` — `parseDateRange()` 函数
+- `packages/web/lib/utils.ts` — `parseDateRange()` 函数
 
 ### 当前行为
 
@@ -121,7 +121,7 @@ export function parseDateRange(last?: string | null, start?: string | null, end?
 
 ### 3.1 Diet Stats 修复
 
-**文件**：`apps/api/app/api/v1/diets/stats/route.ts`
+**文件**：`packages/web/app/api/v1/diets/stats/route.ts`
 
 **修复思路**：按日期分组汇总，再求日均值。
 
@@ -174,7 +174,7 @@ return NextResponse.json({
 
 ### 3.2 Exercise Stats 修复
 
-**文件**：`apps/api/app/api/v1/exercises/stats/route.ts`
+**文件**：`packages/web/app/api/v1/exercises/stats/route.ts`
 
 **修复思路**：同上，按日期分组汇总。
 
@@ -216,7 +216,7 @@ return NextResponse.json({
 
 ### 3.3 Sleep Stats 修复
 
-**文件**：`apps/api/app/api/v1/sleeps/stats/route.ts`
+**文件**：`packages/web/app/api/v1/sleeps/stats/route.ts`
 
 **修复思路**：同上，按日期分组汇总。
 

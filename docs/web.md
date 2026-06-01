@@ -94,7 +94,7 @@ Hum 提供基于 Web 的可视化管理面板，访问 `http://localhost:3000` �
 
 ## 国际化
 
-Web 面板支持中文和英文，根据浏览器语言自动切换。国际化文件位于 `apps/api/messages/` 目录。
+Web 面板支持中文和英文，根据浏览器语言自动切换。国际化文件位于 `packages/web/messages/` 目录。
 
 ## 响应式设计
 

@@ -2,7 +2,7 @@
 
 ## 数据库
 
-项目使用 Prisma ORM 进行数据库管理。Schema 定义在 `apps/api/prisma/schema.prisma` 中。
+项目使用 Prisma ORM 进行数据库管理。Schema 定义在 `packages/web/prisma/schema.prisma` 中。
 
 ### 数据模型
 
@@ -26,7 +26,7 @@
 项目支持 SQLite 和 PostgreSQL 双数据库：
 
 ```bash
-cd apps/api
+cd packages/web
 
 # SQLite（本地开发默认）
 DATABASE_URL="file:./prisma/dev.db" npx prisma migrate dev
@@ -45,7 +45,7 @@ DB_TYPE=postgresql  # 使用 PostgreSQL
 ### 常用命令
 
 ```bash
-cd apps/api
+cd packages/web
 
 npx prisma generate       # 生成 Prisma Client
 npx prisma migrate dev    # 开发环境运行迁移
@@ -75,7 +75,7 @@ docker compose --profile postgres up -d
 ### 构建镜像
 
 ```bash
-cd apps/api
+cd packages/web
 docker build -t hum-api .
 ```
 

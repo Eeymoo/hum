@@ -45,7 +45,12 @@ configCmd
     console.log('Configuration:')
     for (const [key, value] of Object.entries(allConfig)) {
       const displayKey = key === 'apiUrl' ? 'api-url' : key === 'dateFormat' ? 'date-format' : key
-      console.log(`  ${displayKey}: ${value}`)
+      let displayValue = value
+      // 脱敏敏感信息
+      if ((key === 'apiKey' || key === 'accessToken' || key === 'refreshToken') && typeof value === 'string' && value.length > 8) {
+        displayValue = value.slice(0, 4) + '****' + value.slice(-4)
+      }
+      console.log(`  ${displayKey}: ${displayValue}`)
     }
   })
 
