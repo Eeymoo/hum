@@ -25,7 +25,7 @@ export default async function DashboardLayout({
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
+                <Link href="/dashboard" className="text-xl font-bold text-emerald-600">
                   Hum
                 </Link>
               </div>

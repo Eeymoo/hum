@@ -7,6 +7,7 @@ import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import Card from '@/app/components/Card'
 
 interface TimeRange {
   last?: string
@@ -149,17 +150,17 @@ export default function ExercisePage() {
         </div>
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[0, 1, 2].map(i => (
-            <div key={i} className="bg-white shadow rounded-lg p-4">
+            <Card key={i} padding="sm">
               <div className="animate-pulse bg-gray-200 rounded h-4 w-24 mb-2"></div>
               <div className="animate-pulse bg-gray-200 rounded h-8 w-16"></div>
-            </div>
+            </Card>
           ))}
         </div>
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <div className="animate-pulse bg-gray-200 rounded h-6 w-64 mb-4"></div>
           <div className="animate-pulse bg-gray-200 rounded h-64 w-full"></div>
-        </div>
-        <div className="bg-white shadow rounded-lg">
+        </Card>
+        <Card padding="none">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="animate-pulse bg-gray-200 rounded h-6 w-40"></div>
           </div>
@@ -179,17 +180,9 @@ export default function ExercisePage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
     )
-  }
-
-  const typeIcons: Record<string, string> = {
-    running: '🏃',
-    strength: '💪',
-    cycling: '🚴',
-    swimming: '🏊',
-    other: '🎯'
   }
 
   const chartData = stats?.frequencyByType
@@ -205,7 +198,7 @@ export default function ExercisePage() {
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
         >
           {showForm ? tc('cancel') : t('logExercise')}
         </button>
@@ -223,7 +216,7 @@ export default function ExercisePage() {
       )}
 
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-lg font-medium mb-4">{t('newExercise')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -232,7 +225,7 @@ export default function ExercisePage() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 >
                   <option value="running">{t('running')}</option>
                   <option value="strength">{t('strength')}</option>
@@ -248,7 +241,7 @@ export default function ExercisePage() {
                   required
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -259,7 +252,7 @@ export default function ExercisePage() {
                   type="number"
                   value={formData.caloriesBurned}
                   onChange={(e) => setFormData({ ...formData, caloriesBurned: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
               <div>
@@ -270,7 +263,7 @@ export default function ExercisePage() {
                   max="10"
                   value={formData.feeling}
                   onChange={(e) => setFormData({ ...formData, feeling: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -281,7 +274,7 @@ export default function ExercisePage() {
                 placeholder={t('activitiesPlaceholder')}
                 value={formData.activities}
                 onChange={(e) => setFormData({ ...formData, activities: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
             <div>
@@ -290,7 +283,7 @@ export default function ExercisePage() {
                 type="datetime-local"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
             {submitError && (
@@ -298,42 +291,42 @@ export default function ExercisePage() {
             )}
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
             >
               {tc('save')}
             </button>
           </form>
-        </div>
+        </Card>
       )}
 
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white shadow rounded-lg p-4">
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('totalSessions')}</div>
             <div className="text-2xl font-bold">{stats.count}</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('totalDuration')}</div>
             <div className="text-2xl font-bold">{stats.totalDuration} {t('min')}</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('totalCalories')}</div>
             <div className="text-2xl font-bold">{stats.totalCalories} {t('kcal')}</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('avgDuration')}</div>
             <div className="text-2xl font-bold">{stats.avgDuration?.toFixed(1) || '0'} {t('min')}</div>
-          </div>
+          </Card>
         </div>
       )}
 
       {chartData.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-lg font-medium mb-4">{t('frequencyTitle')}</h2>
           <ReactECharts
             option={{
               tooltip: { trigger: 'axis', formatter: `{b}: {c} ${t('sessions')}` },
-              color: ['#6366f1'],
+              color: ['#34D399'],
               xAxis: { type: 'category', data: chartData.map(d => d.type) },
               yAxis: { type: 'value' },
               series: [{
@@ -343,10 +336,10 @@ export default function ExercisePage() {
             }}
             style={{ height: 256 }}
           />
-        </div>
+        </Card>
       )}
 
-      <div className="bg-white shadow rounded-lg">
+      <Card padding="none">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">{t('recentExercises')}</h2>
         </div>
@@ -355,7 +348,6 @@ export default function ExercisePage() {
             <li key={exercise.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
               <Link href={`/dashboard/exercise/${exercise.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <span className="text-2xl mr-3">{typeIcons[exercise.type] || '🎯'}</span>
                   <div>
                     <div className="text-lg font-medium text-gray-900 capitalize">{t(exercise.type)}</div>
                     <div className="text-sm text-gray-500">{exercise.duration} {t('min')}</div>
@@ -385,7 +377,7 @@ export default function ExercisePage() {
           onPageChange={setPage}
           onLimitChange={(l) => { setLimit(l); setPage(1) }}
         />
-      </div>
+      </Card>
     </div>
   )
 }

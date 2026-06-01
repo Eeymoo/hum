@@ -2,8 +2,10 @@ import { auth, signOut } from '@/auth'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { getTranslations } from 'next-intl/server'
+import Card from '@/app/components/Card'
 import { ExportButton } from './ExportButton'
 import TimezoneSettings from './TimezoneSettings'
+import TargetWeightSettings from './TargetWeightSettings'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -19,7 +21,7 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('title')}</h1>
 
       <div className="space-y-6">
-        <div className="bg-white shadow rounded-lg p-6">
+        <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('profile')}</h2>
           <div className="flex items-center">
             {session.user?.image ? (
@@ -31,8 +33,8 @@ export default async function SettingsPage() {
                 className="w-16 h-16 rounded-full mr-4"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mr-4">
-                <span className="text-2xl text-indigo-600">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mr-4">
+                <span className="text-2xl text-emerald-600">
                   {session.user?.name?.[0] || session.user?.email?.[0] || '?'}
                 </span>
               </div>
@@ -44,32 +46,34 @@ export default async function SettingsPage() {
               <div className="text-sm text-gray-500">{session.user?.email}</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         <TimezoneSettings />
 
-        <div className="bg-white shadow rounded-lg p-6">
+        <TargetWeightSettings />
+
+        <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('apiKeys')}</h2>
           <p className="text-sm text-gray-500 mb-4">
             {t('apiKeysDesc')}
           </p>
           <a
             href="/dashboard/api-keys"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700"
           >
             {t('manageKeys')}
           </a>
-        </div>
+        </Card>
 
-        <div className="bg-white shadow rounded-lg p-6">
+        <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('dataExport')}</h2>
           <p className="text-sm text-gray-500 mb-4">
             {t('exportDesc')}
           </p>
           <ExportButton />
-        </div>
+        </Card>
 
-        <div className="bg-white shadow rounded-lg p-6">
+        <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">{t('account')}</h2>
           <form action={async () => {
             'use server'
@@ -82,7 +86,7 @@ export default async function SettingsPage() {
               {t('signOut')}
             </button>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
+import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 
@@ -134,7 +135,7 @@ export default function RecordsPage() {
           <div className="animate-pulse bg-gray-200 rounded h-8 w-28"></div>
           <div className="animate-pulse bg-gray-200 rounded h-10 w-32"></div>
         </div>
-        <div className="bg-white shadow rounded-lg">
+        <Card padding="none">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="animate-pulse bg-gray-200 rounded h-6 w-32"></div>
           </div>
@@ -155,7 +156,7 @@ export default function RecordsPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -166,7 +167,7 @@ export default function RecordsPage() {
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => { setShowForm(!showForm); setSubmitError(null) }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
         >
           {showForm ? tc('cancel') : t('newRecord')}
         </button>
@@ -184,7 +185,7 @@ export default function RecordsPage() {
       )}
 
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-lg font-medium mb-4">{t('newRecordTitle')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -239,7 +240,7 @@ export default function RecordsPage() {
                 type="datetime-local"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
             {submitError && (
@@ -247,15 +248,15 @@ export default function RecordsPage() {
             )}
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
             >
               {tc('save')}
             </button>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div className="bg-white shadow rounded-lg">
+      <Card padding="none">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">{t('allRecords')}</h2>
         </div>
@@ -265,7 +266,7 @@ export default function RecordsPage() {
               <div className="flex items-center justify-between">
                 <Link href={`/dashboard/records/${record.id}`} className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                       {record.type}
                     </span>
                     {record.tags?.map((tag: string) => (
@@ -290,7 +291,6 @@ export default function RecordsPage() {
           ))}
           {records.length === 0 && (
             <li className="px-6 py-8 text-center text-gray-500">
-              <div className="text-4xl mb-2">📝</div>
               <p>{t('noRecords')}</p>
             </li>
           )}
@@ -303,7 +303,7 @@ export default function RecordsPage() {
           onPageChange={setPage}
           onLimitChange={(l) => { setLimit(l); setPage(1) }}
         />
-      </div>
+      </Card>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import Card from '@/app/components/Card'
 
 interface ApiKey {
   id: string
@@ -141,7 +142,7 @@ export default function ApiKeysPage() {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <Card className="mb-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">{t('createTitle')}</h2>
         <form onSubmit={createKey} className="flex gap-4">
           <input
@@ -149,12 +150,12 @@ export default function ApiKeysPage() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder={t('namePlaceholder')}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
           />
           <button
             type="submit"
             disabled={creating}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
           >
             {creating ? t('creating') : t('createButton')}
           </button>
@@ -162,16 +163,15 @@ export default function ApiKeysPage() {
         {error && (
           <p className="text-red-500 text-sm mt-2">{error}</p>
         )}
-      </div>
+      </Card>
 
-      <div className="bg-white shadow rounded-lg">
+      <Card padding="none">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">{t('yourKeys')}</h2>
         </div>
 
         {keys.length === 0 ? (
           <div className="px-6 py-8 text-center text-gray-500">
-            <div className="text-4xl mb-2">🔑</div>
             <p>{t('noKeys')}</p>
             <p className="text-sm">{t('createHint')}</p>
           </div>
@@ -195,7 +195,7 @@ export default function ApiKeysPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => copyToClipboard(key.key)}
-                      className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded hover:bg-indigo-50"
+                      className="px-3 py-1 text-sm text-emerald-600 hover:text-emerald-800 border border-emerald-200 rounded hover:bg-emerald-50"
                     >
                       {tc('copy')}
                     </button>
@@ -211,7 +211,7 @@ export default function ApiKeysPage() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
 
       <div className="mt-6 bg-gray-50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-gray-700 mb-2">{t('usageExample')}</h3>

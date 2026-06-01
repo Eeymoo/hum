@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
 
 interface TimeRange {
@@ -78,7 +79,7 @@ export default function TimelinePage() {
     return (
       <div className="p-6">
         <div className="animate-pulse bg-gray-200 rounded h-8 w-28 mb-6"></div>
-        <div className="bg-white shadow rounded-lg">
+        <Card padding="none">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="animate-pulse bg-gray-200 rounded h-6 w-32"></div>
           </div>
@@ -96,17 +97,9 @@ export default function TimelinePage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
     )
-  }
-
-  const typeIcons: Record<string, string> = {
-    weight: '⚖️',
-    exercise: '🏃',
-    diet: '🍽️',
-    sleep: '😴',
-    record: '📝'
   }
 
   const detailPaths: Record<string, string> = {
@@ -132,7 +125,7 @@ export default function TimelinePage() {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg">
+      <Card padding="none">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">{t('allActivity')}</h2>
         </div>
@@ -140,7 +133,6 @@ export default function TimelinePage() {
           {items.map((item) => (
             <li key={`${item.type}-${item.id}`} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
               <Link href={`${detailPaths[item.type]}/${item.id}`} className="flex items-start">
-                <span className="text-2xl mr-3">{typeIcons[item.type] || '📝'}</span>
                 <div className="flex-1">
                   <div className="text-sm text-gray-500 capitalize mb-1">{t(item.type)}</div>
                   <div className="text-sm text-gray-900">
@@ -170,7 +162,7 @@ export default function TimelinePage() {
           onPageChange={setPage}
           onLimitChange={(l) => { setLimit(l); setPage(1) }}
         />
-      </div>
+      </Card>
     </div>
   )
 }

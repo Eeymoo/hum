@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import Card from '@/app/components/Card'
 
 const PRESET_FORMATS = [
   { value: 'YYYY-MM-DD HH:mm', label: '2000-02-02 02:02' },
@@ -51,7 +52,7 @@ export default function TimezoneSettings() {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <Card>
       <h2 className="text-lg font-medium text-gray-900 mb-4">{t('timezone')}</h2>
       <div className="space-y-4">
         <div>
@@ -61,7 +62,7 @@ export default function TimezoneSettings() {
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
             placeholder={detectedTz}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
           />
           {detectedTz && (
             <p className="mt-1 text-xs text-gray-500">
@@ -74,7 +75,7 @@ export default function TimezoneSettings() {
           <select
             value={dateFormat}
             onChange={(e) => setDateFormat(e.target.value)}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
           >
             {PRESET_FORMATS.map((fmt) => (
               <option key={fmt.value} value={fmt.value}>
@@ -91,11 +92,11 @@ export default function TimezoneSettings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
         >
           {saving ? t('tzSaving') : t('tzSave')}
         </button>
       </div>
-    </div>
+    </Card>
   )
 }

@@ -89,7 +89,7 @@
     "min": "Min",
     "max": "Max",
     "change30d": "Change (30d)",
-    "trendTitle": "Weight Trend (30 days)",
+    "trendTitle": "Weight Trend",
     "recentEntries": "Recent Entries",
     "noRecords": "No weight records yet",
     "seriesWeight": "Weight",
@@ -103,7 +103,12 @@
     "visceralFat": "Visceral Fat",
     "attachments": "Attachments",
     "extraData": "Extra Data",
-    "updated": "Updated"
+    "updated": "Updated",
+    "calendarTitle": "Weight Calendar Heatmap",
+    "exerciseMark": "Exercise Day",
+    "caloriesBurned": "Calories Burned",
+    "goToSettings": "Go to Settings",
+    "targetWeight": "Target Weight"
   },
   "exercise": {
     "title": "Exercise Tracking",
@@ -288,6 +293,9 @@
     "exportSuccess": "Export completed!",
     "exportError": "Export failed. Please try again.",
     "account": "Account",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "healthGoals": "Health Goals",
+    "targetWeight": "Target Weight",
+    "targetWeightSaved": "Target weight saved"
   }
 }

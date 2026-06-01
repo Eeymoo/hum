@@ -89,7 +89,7 @@
     "min": "最低",
     "max": "最高",
     "change30d": "变化（30天）",
-    "trendTitle": "体重趋势（30天）",
+    "trendTitle": "体重趋势",
     "recentEntries": "最近记录",
     "noRecords": "暂无体重记录",
     "seriesWeight": "体重",
@@ -103,7 +103,12 @@
     "visceralFat": "内脏脂肪",
     "attachments": "附件",
     "extraData": "额外数据",
-    "updated": "更新于"
+    "updated": "更新于",
+    "calendarTitle": "体重日力图",
+    "exerciseMark": "运动日",
+    "caloriesBurned": "消耗热量",
+    "goToSettings": "去设置",
+    "targetWeight": "目标体重"
   },
   "exercise": {
     "title": "运动追踪",
@@ -288,6 +293,9 @@
     "exportSuccess": "导出完成！",
     "exportError": "导出失败，请重试。",
     "account": "账号",
-    "signOut": "退出登录"
+    "signOut": "退出登录",
+    "healthGoals": "健康目标",
+    "targetWeight": "目标体重",
+    "targetWeightSaved": "目标体重已保存"
   }
 }

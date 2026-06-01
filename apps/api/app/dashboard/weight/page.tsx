@@ -5,7 +5,9 @@ import ReactECharts from 'react-echarts-library'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
+import Card from '@/app/components/Card'
 import Pagination from '@/app/components/Pagination'
+import WeightCalendarHeatmap from '@/app/components/WeightCalendarHeatmap'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 
 interface TimeRange {
@@ -51,6 +53,7 @@ export default function WeightPage() {
   const [limit, setLimit] = useState(20)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [targetWeight, setTargetWeight] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,9 +70,10 @@ export default function WeightPage() {
       if (timeRange.start) statsParams.set('start', timeRange.start)
       if (timeRange.end) statsParams.set('end', timeRange.end)
 
-      const [weightsRes, statsRes] = await Promise.all([
+      const [weightsRes, statsRes, settingsRes] = await Promise.all([
         fetch(`/api/v1/weights?${params}`),
-        fetch(`/api/v1/weights/stats?${statsParams}`)
+        fetch(`/api/v1/weights/stats?${statsParams}`),
+        fetch('/api/v1/settings')
       ])
 
       if (weightsRes.ok) {
@@ -82,6 +86,12 @@ export default function WeightPage() {
       if (statsRes.ok) {
         const statsData = await statsRes.json()
         setStats(statsData)
+      }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json()
+        const tw = settingsData.settings?.['target-weight']
+        setTargetWeight(tw ? parseFloat(tw) : null)
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -141,17 +151,17 @@ export default function WeightPage() {
         </div>
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className="bg-white shadow rounded-lg p-4">
+            <Card key={i} padding="sm">
               <div className="animate-pulse bg-gray-200 rounded h-4 w-24 mb-2"></div>
               <div className="animate-pulse bg-gray-200 rounded h-8 w-16"></div>
-            </div>
+            </Card>
           ))}
         </div>
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <div className="animate-pulse bg-gray-200 rounded h-6 w-48 mb-4"></div>
           <div className="animate-pulse bg-gray-200 rounded h-64 w-full"></div>
-        </div>
-        <div className="bg-white shadow rounded-lg">
+        </Card>
+        <Card padding="none">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="animate-pulse bg-gray-200 rounded h-6 w-36"></div>
           </div>
@@ -168,7 +178,7 @@ export default function WeightPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -185,7 +195,7 @@ export default function WeightPage() {
         <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
         >
           {showForm ? tc('cancel') : t('addWeight')}
         </button>
@@ -203,7 +213,7 @@ export default function WeightPage() {
       )}
 
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-lg font-medium mb-4">{t('logWeight')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -215,7 +225,7 @@ export default function WeightPage() {
                   required
                   value={formData.weight}
                   onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
               <div>
@@ -225,7 +235,7 @@ export default function WeightPage() {
                   step="0.1"
                   value={formData.bodyFat}
                   onChange={(e) => setFormData({ ...formData, bodyFat: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -235,7 +245,7 @@ export default function WeightPage() {
                 type="datetime-local"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
             <div>
@@ -243,7 +253,7 @@ export default function WeightPage() {
               <textarea
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
                 rows={3}
               />
             </div>
@@ -252,44 +262,46 @@ export default function WeightPage() {
             )}
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
             >
               {tc('save')}
             </button>
           </form>
-        </div>
+        </Card>
       )}
 
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white shadow rounded-lg p-4">
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('average')}</div>
             <div className="text-2xl font-bold">{stats.avgWeight} kg</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('min')}</div>
             <div className="text-2xl font-bold">{stats.minWeight} kg</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('max')}</div>
             <div className="text-2xl font-bold">{stats.maxWeight} kg</div>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
+          </Card>
+          <Card padding="sm">
             <div className="text-sm text-gray-500">{t('change30d')}</div>
             <div className={`text-2xl font-bold ${(stats.change || 0) < 0 ? 'text-green-600' : 'text-red-600'}`}>
               {stats.change !== null ? `${stats.change > 0 ? '+' : ''}${stats.change} kg` : 'N/A'}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
+      <WeightCalendarHeatmap year={new Date().getFullYear()} targetWeight={targetWeight} />
+
       {chartData.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-lg font-medium mb-4">{t('trendTitle')}</h2>
           <ReactECharts
             option={{
               tooltip: { trigger: 'axis', formatter: '{b}: {c} kg' },
-              color: ['#6366f1'],
+              color: ['#34D399'],
               xAxis: { type: 'category', data: chartData.map(d => d.date) },
               yAxis: { type: 'value' },
               series: [{
@@ -300,10 +312,10 @@ export default function WeightPage() {
             }}
             style={{ height: 256 }}
           />
-        </div>
+        </Card>
       )}
 
-      <div className="bg-white shadow rounded-lg">
+      <Card padding="none">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">{t('recentEntries')}</h2>
         </div>
@@ -336,7 +348,7 @@ export default function WeightPage() {
           onPageChange={setPage}
           onLimitChange={(l) => { setLimit(l); setPage(1) }}
         />
-      </div>
+      </Card>
     </div>
   )
 }

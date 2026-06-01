@@ -57,7 +57,7 @@ export default function TimeRangeSelector({ value, onChange }: TimeRangeSelector
             onClick={() => handlePreset(preset)}
             className={`px-3 py-1.5 text-sm font-medium transition-colors ${
               active === preset
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-emerald-600 text-white'
                 : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -70,14 +70,14 @@ export default function TimeRangeSelector({ value, onChange }: TimeRangeSelector
           type="date"
           value={value.start || ''}
           onChange={(e) => handleCustom('start', e.target.value)}
-          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
         <span className="text-gray-400">~</span>
         <input
           type="date"
           value={value.end || ''}
           onChange={(e) => handleCustom('end', e.target.value)}
-          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
       </div>
     </div>

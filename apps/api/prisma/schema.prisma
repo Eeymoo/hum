@@ -22,6 +22,7 @@ model User {
   exercises     Exercise[]
   diets         Diet[]
   sleeps        Sleep[]
+  settings      UserSetting[]
   deleteAt      Int       @default(0)
 
   @@map("users")
@@ -170,6 +171,17 @@ model Sleep {
 
   @@index([date])
   @@map("sleeps")
+}
+
+model UserSetting {
+  id     String @id @default(uuid())
+  userId String
+  key    String
+  value  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("user_settings")
 }
 
 model DeviceCode {

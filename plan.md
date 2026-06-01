@@ -1,276 +1,239 @@
-# Hum v0.1.16 最终计划
+# 体重日力图 — 实施计划
 
-> **版本目标**：修复数据计算错误，建立拍照录入基础设施，零冗余 Schema 扩展。  
-> **场景**：个人使用 + OpenClaw 拍照识别 + CLI 自动录入  
-> **工期**：1 天  
-> **API**：0.1.15 → 0.1.16 | **CLI**：0.1.6 → 0.1.16
-
----
-
-## 一、必须修复（P0）
-
-### B2: `parseDateRange` 同日查询返回 0 条
-
-**问题**：`--start 2026-05-20 --end 2026-05-20` 解析为 `00:00:00` 到 `00:00:00`，匹配不到含时间部分的记录。
-
-**修复**：`endDate` 设为当天 `23:59:59.999`。
-
-```typescript
-// apps/api/lib/utils.ts
-if (end) {
-  endDate = new Date(end)
-  endDate.setHours(23, 59, 59, 999)
-}
-```
-
-**影响**：所有模块的同日查询（weight/diet/exercise/sleep/record）。
+> **目标**：在体重追踪页添加"日力图"（ECharts 日历热力图），展示每日体重变化，运动日叠加水平红色标记
+> **版本**：v0.1.18
+> **日期**：2026-05-29
 
 ---
 
-### B1 + B3: Stats 均值计算错误
+## 一、视觉效果
 
-**原则**：`sum(非空值) / count(非空记录数)`
-
-| 模块 | 修复内容 | 文件 |
-|------|----------|------|
-| Sleep | `avgDeepSleep` 只除以 `deepSleep !== null` 的记录数 | `apps/api/app/api/v1/sleeps/stats/route.ts` |
-| Diet | 日均不按 `daysInRange` 算，按有数据的记录数算 | `apps/api/app/api/v1/diets/stats/route.ts` |
-| Exercise | 新增 `avgDuration`、`avgCalories` | `apps/api/app/api/v1/exercises/stats/route.ts` |
-
-**Sleep Stats 修复后逻辑**：
-
-```typescript
-let totalDuration = 0, totalQuality = 0, totalDeepSleep = 0
-let count = 0, deepSleepCount = 0
-
-sleeps.forEach(s => {
-  totalDuration += s.duration
-  totalQuality += s.quality
-  if (s.deepSleep !== null) {
-    totalDeepSleep += s.deepSleep
-    deepSleepCount++
-  }
-  count++
-})
-
-return {
-  avgDuration: count > 0 ? totalDuration / count : null,
-  avgQuality: count > 0 ? totalQuality / count : null,
-  avgDeepSleep: deepSleepCount > 0 ? totalDeepSleep / deepSleepCount : null,
-  count
-}
+```
+       2026 年 体重日力图
+ ┌─────────────────────────────────────────────┐
+ │  一月          二月          三月      ...    │
+ │ 日 一 二 ...   日 一 二 ...   日 一 二 ...     │
+ │  ·  ·  ·       🟢 ·  ·       ·  ·  ·        │
+ │  ·  🟢 ·       ·  ·  🔴      ·  ·  ·        │
+ │  ·  ·  🔴      ·  🔴 ·       ·  ·  ·        │
+ │  ·  ·  ·       ·  ·  ·       █  ·  ·        │
+ │                              ↑ 运动标记      │
+ ├─────────────────────────────────────────────┤
+ │  🟢 下降    🔴 上升    ⬜ 无记录               │
+ │  █ 运动日（红深 = 消耗多）                     │
+ └─────────────────────────────────────────────┘
 ```
 
-**Diet Stats 修复后逻辑**：
+### 颜色规则
 
-```typescript
-let caloriesCount = 0, proteinCount = 0, carbsCount = 0, fatCount = 0
-
-diets.forEach(d => {
-  if (d.calories !== null) { totalCalories += d.calories; caloriesCount++ }
-  if (d.protein !== null) { totalProtein += d.protein; proteinCount++ }
-  if (d.carbs !== null) { totalCarbs += d.carbs; carbsCount++ }
-  if (d.fat !== null) { totalFat += d.fat; fatCount++ }
-  if (d.water !== null) totalWater += d.water
-})
-
-return {
-  avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
-  avgProtein: proteinCount > 0 ? totalProtein / proteinCount : null,
-  avgCarbs: carbsCount > 0 ? totalCarbs / carbsCount : null,
-  avgFat: fatCount > 0 ? totalFat / fatCount : null,
-  totalWater: totalWater > 0 ? totalWater : null,
-  count: diets.length
-}
-```
-
-> Dashboard `diet/page.tsx` 同步：`avgDailyCalories` → `avgCalories`，标签同步调整。
+| 含义 | 颜色 | 规则 |
+|------|------|------|
+| 体重下降 | 🟢 绿色 | 相比上次记录减少，降幅越大绿色越深 |
+| 体重上升 | 🔴 红色 | 相比上次记录增加，涨幅越大红色越深 |
+| 持平 | ⚪ 浅灰 | 差值在 ±0.1kg 以内 |
+| 无记录 | ⬜ 空白 | 当天未测量体重 |
+| 运动标记 | █ 红色短线 | 水平标记，颜色深浅 = 当日消耗热量 |
 
 ---
 
-### F1: Sleep Add 自动计算 Duration
+## 二、数据模型
 
-**问题**：AI 从手环截图提取 `bedtime`/`waketime` 后，还需心算 `duration`，易出错。
-
-**修复**：`--duration` 降为可选，有 `bedtime` + `waketime` 时自动推导。
-
-```javascript
-// packages/cli/src/commands/sleep.js
-let duration = options.duration
-if (!duration && options.bedtime && options.waketime) {
-  const [bh, bm] = options.bedtime.split(':').map(Number)
-  const [wh, wm] = options.waketime.split(':').map(Number)
-  let diff = (wh * 60 + wm) - (bh * 60 + bm)
-  if (diff < 0) diff += 24 * 60
-  duration = (diff / 60).toFixed(1)
-}
-if (!duration) {
-  console.error('需要 --duration 或同时提供 --bedtime 和 --waketime')
-  process.exit(1)
-}
-```
-
----
-
-## 二、必须新增（P1）
-
-### F5: `extraData` JSON 通用字段（拍照录入核心）
-
-**理由**：AI 从体脂秤/手环截图提取的字段（身体年龄、蛋白质率、骨骼肌量、血氧等）随时变化，不能每换个设备就改 Schema。
-
-**Schema 变更**：
+### 2.1 新建 `UserSetting` — 用户设置
 
 ```prisma
-// prisma/schema.prisma
-model Weight {
-  // ... existing fields ...
-  extraData Json?
-}
+model UserSetting {
+  id     String @id @default(uuid())
+  userId String
+  key    String
+  value  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model Sleep {
-  // ... existing fields ...
-  extraData Json?
-}
-
-model Diet {
-  // ... existing fields ...
-  extraData Json?
-}
-
-model Exercise {
-  // ... existing fields ...
-  extraData Json?
+  @@unique([userId, key])
+  @@map("user_settings")
 }
 ```
 
-> 使用 Prisma `Json?` 类型，API 直接存取 JSON object，无需 parse/stringify。
+`User` 模型同步添加 `settings UserSetting[]` 关系。
 
-**API 行为**：
-- POST/PATCH：接收 `extraData`（JSON object），直接存入
-- GET：原样返回 JSON object
+### 2.2 设置 key
 
-**CLI 用法**：
+| key | 类型 | 说明 |
+|-----|------|------|
+| `target-weight` | Float | 目标体重（kg） |
 
-```bash
-hum weight add --value 70.5 \
-  --extra-data '{"bodyAge":28,"proteinRate":13.1,"boneMass":3.2}'
-
-hum sleep add --duration 7.5 \
-  --extra-data '{"heartRateAvg":62,"spo2Avg":98}'
-```
-
-**Dashboard**：列表页增加 `extraData` 折叠展示（JSON 预览或"查看详情"按钮），**不需要为每个字段做输入框**。
+统一使用 kebab-case，与 CLI `conf` 命名一致，后续可扩展。
 
 ---
 
-### F10 + B4: Exercise Stats 均值 + CLI 展示增强
+## 三、API
 
-**API 新增**：`avgDuration`、`avgCalories`
+### 3.1 `GET/PUT /api/v1/settings`
+
+```
+GET  /api/v1/settings          → { "settings": { "target-weight": "65" } }
+PUT  /api/v1/settings/:key     → 更新单个设置
+```
+
+### 3.2 `GET /api/v1/weights/calendar?year=2026`
+
+```json
+{
+  "data": [
+    ["2026-01-01", null, null],
+    ["2026-01-02", -0.3, 70.5],
+    ["2026-01-03", +0.5, 71.0]
+  ],
+  "exerciseDays": [
+    ["2026-01-02", 450],
+    ["2026-01-05", 320]
+  ],
+  "summary": {
+    "totalRecords": 42,
+    "totalExerciseDays": 15,
+    "netChange": -1.5
+  },
+  "year": 2026
+}
+```
+
+- `data` 中每项：`[日期, 体重变化量, 当日体重]`
+- `exerciseDays` 中每项：`[日期, 当日消耗总热量]`
+
+---
+
+## 四、前端组件
+
+### 4.1 `WeightCalendarHeatmap.tsx`
 
 ```typescript
-// apps/api/app/api/v1/exercises/stats/route.ts
-return {
-  totalDuration,
-  totalCalories,
-  avgDuration: exercises.length > 0 ? totalDuration / exercises.length : null,
-  avgCalories: caloriesCount > 0 ? totalCalories / caloriesCount : null,
-  frequencyByType,
-  count: exercises.length
+interface Props {
+  year: number
+  targetWeight: number | null
 }
 ```
 
-**CLI `output.js` 同步**：
+### 4.2 ECharts 配置
 
-```javascript
-case 'exercise-stats':
-  if (data.count !== undefined) rows.push(['总次数', data.count])
-  if (data.totalDuration !== undefined) rows.push(['总时长', `${data.totalDuration} min`])
-  if (data.avgDuration !== null) rows.push(['平均时长', `${data.avgDuration.toFixed(1)} min`])
-  if (data.totalCalories !== undefined) rows.push(['总热量', `${data.totalCalories} kcal`])
-  if (data.avgCalories !== null) rows.push(['平均热量', `${data.avgCalories.toFixed(0)} kcal`])
-  if (data.frequencyByType) {
-    for (const [t, c] of Object.entries(data.frequencyByType)) {
-      rows.push([`频率 (${t})`, c])
-    }
+双 `visualMap`：
+
+```typescript
+visualMap: [
+  {
+    // 体重变化 → 红绿分段
+    seriesIndex: 0,
+    type: 'piecewise',
+    pieces: [
+      { min: 0.5,  color: '#DC2626' },            // 明显上升
+      { min: 0.1,  max: 0.5,  color: '#FCA5A5' }, // 轻微上升
+      { min: -0.1, max: 0.1,  color: '#E5E7EB' }, // 持平
+      { min: -0.5, max: -0.1, color: '#86EFAC' }, // 轻微下降
+      { max: -0.5, color: '#16A34A' },             // 明显下降
+    ]
+  },
+  {
+    // 运动消耗 → 红色深浅
+    min: 0, max: 800,
+    seriesIndex: 1,
+    type: 'continuous',
+    inRange: { color: ['#FEE2E2', '#EF4444', '#B91C1C'] }
   }
-  break
+],
+series: [
+  {
+    type: 'heatmap',
+    coordinateSystem: 'calendar',
+    data: weightChangeData   // [[日期, 变化量], ...]
+  },
+  {
+    type: 'effectScatter',
+    coordinateSystem: 'calendar',
+    data: exerciseDays,      // [[日期, 热量], ...]
+    symbol: 'rect',
+    symbolSize: [12, 3],     // 水平短线
+    z: 10
+  }
+]
 ```
 
 ---
 
-## 三、明确不做（本次迭代）
+## 五、页面集成
 
-| 项 | 理由 |
-|----|------|
-| F4 具体字段转正（`leftArmMuscle`、`bodyAge`、`spo2Avg` 等） | AI 识别的设备字段全部走 `extraData`，Schema 永不膨胀 |
-| F6 Drink 独立类型 | `mealType=snack --note "水 500ml"` 或塞 `extraData`，5 秒解决 |
-| F7 批量导入 | 逐条拍照录入，无批量场景；真有历史数据用脚本调 API |
-| F8 Trend 命令 | `hum weight stats --last 30d` 已返回均值/极值/变化量 |
-| Dashboard 表单扩展新字段 | `extraData` 不需要表单输入框，AI 直接 CLI 录入 |
+### 5.1 Settings 页面 — 新增「健康目标」
 
----
+在 `settings/page.tsx` 添加卡片：
 
-## 四、实施顺序
+```
+┌──────────────────────────────────────┐
+│  🎯 健康目标                         │
+│  目标体重: [___] kg     [已保存 ✓]   │
+└──────────────────────────────────────┘
+```
 
-### Phase 1：Bug 修复（2–3 小时）
+- 客户端组件 `TargetWeightSettings`（`'use client'`）
+- 调用 `PUT /api/v1/settings/target-weight` 保存
+- 体重页面从此 API 读取目标体重
 
-| # | 任务 | 文件 |
-|---|------|------|
-| 1 | 修复 `parseDateRange` end 边界 | `apps/api/lib/utils.ts` |
-| 2 | 修复 sleep stats 均值计算 | `apps/api/app/api/v1/sleeps/stats/route.ts` |
-| 3 | 修复 diet stats 均值计算 | `apps/api/app/api/v1/diets/stats/route.ts` |
-| 4 | 增强 exercise stats 返回值 | `apps/api/app/api/v1/exercises/stats/route.ts` |
-| 5 | Sleep add 自动计算 duration | `packages/cli/src/commands/sleep.js` |
-| 6 | Dashboard diet stats 标签同步 | `apps/api/app/dashboard/diet/page.tsx` |
+### 5.2 Weight 页面 — 插入日力图
 
-### Phase 2：`extraData` 基础设施（3–4 小时）
+在统计卡片和折线图之间插入 `WeightCalendarHeatmap`：
 
-| # | 任务 | 文件 |
-|---|------|------|
-| 7 | Prisma Schema 增加 `extraData Json?` | `prisma/schema.prisma` |
-| 8 | 生成并执行迁移 | `prisma migrate dev` |
-| 9 | Weight API 支持 `extraData` | `apps/api/app/api/v1/weights/route.ts`, `[id]/route.ts` |
-| 10 | Sleep API 支持 `extraData` | `apps/api/app/api/v1/sleeps/route.ts`, `[id]/route.ts` |
-| 11 | Diet API 支持 `extraData` | `apps/api/app/api/v1/diets/route.ts`, `[id]/route.ts` |
-| 12 | Exercise API 支持 `extraData` | `apps/api/app/api/v1/exercises/route.ts`, `[id]/route.ts` |
-| 13 | CLI 各模块增加 `--extra-data` | `packages/cli/src/commands/{weight,sleep,diet,exercise}.js` |
-| 14 | CLI output 展示 `extraData` | `packages/cli/src/lib/output.js` |
-| 15 | Dashboard 列表页展示 `extraData` | `apps/api/app/dashboard/{weight,sleep,diet,exercise}/page.tsx` |
-
-### Phase 3：验证（1 小时）
-
-| # | 验证项 | 命令 |
-|---|--------|------|
-| 16 | 同日查询 | `hum diet list --start 2026-05-20 --end 2026-05-20` |
-| 17 | Sleep 自动计算 | `hum sleep add --bedtime 23:00 --waketime 07:00 --quality 8` |
-| 18 | extraData 存储 | `hum weight add --value 70 --extra-data '{"bodyAge":25}'` |
-| 19 | Exercise stats 均值 | `hum exercise stats --last 30d` |
-| 20 | Stats 均值正确性 | 对比有 null 字段时的平均值 |
+```
+┌──────────────────────────────────────────┐
+│  体重追踪                    [+ 记录体重] │
+├──────────────────────────────────────────┤
+│  [ 平均 ] [ 最低 ] [ 最高 ] [ 变化 ]      │  ← 保留
+├──────────────────────────────────────────┤
+│  📅 2026 年体重日力图    ← 2026 →        │  ← 新增
+│  ┌──────────────────────────────────┐    │
+│  │  日历热力图 + 运动标记            │    │
+│  └──────────────────────────────────┘    │
+├──────────────────────────────────────────┤
+│  体重趋势（折线图）                       │  ← 保留
+├──────────────────────────────────────────┤
+│  最近记录                                │  ← 保留
+└──────────────────────────────────────────┘
+```
 
 ---
 
-## 五、验收标准
+## 六、实施步骤
 
-- [ ] `hum X list --start YYYY-MM-DD --end YYYY-MM-DD` 正确返回当天数据（所有模块）
-- [ ] `hum sleep stats --last 7d` 的 `avgDeepSleep` 只计算有 `deepSleep` 的记录
-- [ ] `hum diet stats --last 7d` 均值按有数据的记录数算，不按 7 天算
-- [ ] `hum exercise stats --last 30d` 返回 `avgDuration` 和 `avgCalories`
-- [ ] `hum sleep add --bedtime 23:00 --waketime 07:00 --quality 8` 自动 `duration=8.0`
-- [ ] `hum weight add --value 70 --extra-data '{"a":1}'` 成功存储，`get` 时原样返回
-- [ ] Dashboard 列表页能查看 `extraData` 原始 JSON
+```
+1. Prisma → 2. Settings API → 3. Calendar API → 4. 组件 → 5. 集成 → 6. i18n → 7. 测试
+```
 
----
-
-## 六、版本号
-
-| 包 | 当前 | 新版本 |
-|---|------|--------|
-| `@hum/api` | 0.1.15 | 0.1.16 |
-| `@eeymoo/hum` (CLI) | 0.1.6 | 0.1.16 |
+| 步骤 | 文件 | 说明 |
+|------|------|------|
+| 1 | `prisma/schema.prisma` | 新增 `UserSetting` 模型 + 迁移 |
+| 2 | `app/api/v1/settings/route.ts` | 用户设置 GET/PUT API |
+| 3 | `app/api/v1/weights/calendar/route.ts` | 日历数据 API |
+| 4 | `app/components/WeightCalendarHeatmap.tsx` | 日力图组件 |
+| 5 | `app/dashboard/weight/page.tsx` | weight 页面集成组件 |
+| 6 | `app/settings/page.tsx` | Settings 页面添加目标体重 |
+| 7 | `messages/zh.json`, `messages/en.json` | i18n 翻译 |
 
 ---
 
-## 七、一句话总结
+## 七、i18n 新增 key
 
-> **修 Bug + 加 `extraData`，其他全部砍掉。**  
-> 拍照录入场景下，Schema 只保留核心字段，AI 识别的所有设备原始数据走 JSON 字段，既保留完整信息，又永远不因换设备而改数据库。
+```json
+// weight 节点
+"calendarTitle": "体重日力图",
+"exerciseMark": "运动日",
+"caloriesBurned": "消耗热量",
+"goToSettings": "去设置",
+
+// settings 节点
+"healthGoals": "健康目标",
+"targetWeight": "目标体重",
+"targetWeightSaved": "目标体重已保存"
+```
+
+---
+
+## 八、版本信息
+
+- **目标版本**：v0.1.18
+- **涉及文件**：9 个
+- **依赖**：echarts v6.1.0、react-echarts-library v1.4.0（已安装）

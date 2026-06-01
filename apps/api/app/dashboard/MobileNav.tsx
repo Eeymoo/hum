@@ -50,7 +50,7 @@ export default function MobileNav() {
       {/* Hamburger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors"
+        className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-colors"
         aria-expanded={isOpen}
         aria-label="Toggle navigation menu"
       >

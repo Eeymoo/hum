@@ -62,7 +62,7 @@ export default function Pagination({
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
             {limitOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -96,7 +96,7 @@ export default function Pagination({
               onClick={() => onPageChange(p)}
               className={`px-2.5 py-1 text-sm rounded border ${
                 p === page
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-emerald-600 text-white border-emerald-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >

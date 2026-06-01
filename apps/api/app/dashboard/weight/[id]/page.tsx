@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useTimezone } from '@/app/components/TimezoneProvider'
+import Card from '@/app/components/Card'
 
 interface WeightDetail {
   id: string
@@ -79,10 +80,10 @@ export default function WeightDetailPage() {
         <div className="animate-pulse bg-gray-200 rounded h-8 w-48 mb-6"></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className="bg-white shadow rounded-lg p-4">
+            <Card key={i} padding="sm">
               <div className="animate-pulse bg-gray-200 rounded h-4 w-20 mb-2"></div>
               <div className="animate-pulse bg-gray-200 rounded h-8 w-16"></div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>
@@ -92,10 +93,10 @@ export default function WeightDetailPage() {
   if (error === 'not_found') {
     return (
       <div className="p-6">
-        <Link href="/dashboard/weight" className="text-indigo-600 hover:text-indigo-800 mb-4 inline-block">← {t('title')}</Link>
-        <div className="bg-white shadow rounded-lg p-8 text-center">
+        <Link href="/dashboard/weight" className="text-emerald-600 hover:text-emerald-800 mb-4 inline-block">← {t('title')}</Link>
+        <Card padding="lg" className="text-center">
           <p className="text-gray-500">{t('noRecords')}</p>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -103,7 +104,7 @@ export default function WeightDetailPage() {
   if (error || !data) {
     return (
       <div className="p-6">
-        <Link href="/dashboard/weight" className="text-indigo-600 hover:text-indigo-800 mb-4 inline-block">← {t('title')}</Link>
+        <Link href="/dashboard/weight" className="text-emerald-600 hover:text-emerald-800 mb-4 inline-block">← {t('title')}</Link>
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex justify-between items-center">
           <span>{error}</span>
           <button onClick={() => window.location.reload()} className="text-sm underline">{tc('retry')}</button>
@@ -124,7 +125,7 @@ export default function WeightDetailPage() {
 
   return (
     <div className="p-6">
-      <Link href="/dashboard/weight" className="text-indigo-600 hover:text-indigo-800 mb-4 inline-block">
+      <Link href="/dashboard/weight" className="text-emerald-600 hover:text-emerald-800 mb-4 inline-block">
         ← {t('title')}
       </Link>
 
@@ -135,22 +136,22 @@ export default function WeightDetailPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {stats.filter(s => s.value).map(stat => (
-          <div key={stat.label} className="bg-white shadow rounded-lg p-4">
+          <Card key={stat.label} padding="sm">
             <div className="text-sm text-gray-500">{stat.label}</div>
             <div className="text-2xl font-bold">{stat.value}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {data.note && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-sm font-medium text-gray-500 mb-2">{t('note')}</h2>
           <p className="text-gray-900 whitespace-pre-wrap">{data.note}</p>
-        </div>
+        </Card>
       )}
 
       {data.attachments && data.attachments.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-sm font-medium text-gray-500 mb-2">{t('attachments')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {data.attachments.map((att, i) => (
@@ -163,16 +164,16 @@ export default function WeightDetailPage() {
               </a>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {data.extraData && Object.keys(data.extraData).length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <Card className="mb-6">
           <h2 className="text-sm font-medium text-gray-500 mb-2">{t('extraData')}</h2>
           <pre className="text-sm text-gray-700 bg-gray-50 p-4 rounded overflow-auto">
             {JSON.stringify(data.extraData, null, 2)}
           </pre>
-        </div>
+        </Card>
       )}
 
       <div className="flex justify-between items-center">
