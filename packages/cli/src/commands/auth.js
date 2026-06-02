@@ -35,7 +35,14 @@ auth
               console.log('Successfully logged in!')
               return
             }
-          } catch {
+          } catch (err) {
+            // authorization_pending 是正常的轮询状态，继续等待
+            const msg = err.message || ''
+            if (msg.includes('authorization_pending') || msg.includes('not yet authorized')) {
+              continue
+            }
+            // 其他错误（如 expired_token、invalid_grant 等）直接报告
+            console.error('Token request error:', msg)
             continue
           }
         }

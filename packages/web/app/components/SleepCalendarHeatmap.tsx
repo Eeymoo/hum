@@ -10,14 +10,32 @@ interface Props {
   year: number
 }
 
+interface CalendarCell {
+  date: string
+  bed: string
+  wake: string
+  devMinutes: number | null
+  score: number | null
+  color: string
+}
+
 interface CalendarData {
-  data: Array<[string, number | null, number]>
+  data: CalendarCell[]
   summary: {
     totalRecords: number
     avgScore: number | null
   }
   year: number
 }
+
+const LEGEND_ITEMS = [
+  { key: 'sleepLegendDeepGreen', color: '#16a34a' },
+  { key: 'sleepLegendLightGreen', color: '#4ade80' },
+  { key: 'sleepLegendYellow', color: '#facc15' },
+  { key: 'sleepLegendOrange', color: '#fb923c' },
+  { key: 'sleepLegendRed', color: '#ef4444' },
+  { key: 'sleepLegendNoScore', color: '#e5e7eb' },
+]
 
 export default function SleepCalendarHeatmap({ year }: Props) {
   const t = useTranslations('sleep')
@@ -71,52 +89,44 @@ export default function SleepCalendarHeatmap({ year }: Props) {
     )
   }
 
-  // 用一致性评分做热力图数据，score 为 null 时用 -1 标记（表示有记录但无评分）
-  const heatmapData = data.data
-    .map(([date, score, duration]) => {
-      const value = score !== null ? score : -1
-      return [date, value]
-    })
-
-  const LEGEND_COLORS = [
-    { key: 'sleepLegendNoScore', color: '#9CA3AF' },
-    { key: 'sleepLegendRed', color: '#DC2626' },
-    { key: 'sleepLegendOrange', color: '#FB923C' },
-    { key: 'sleepLegendYellow', color: '#FACC15' },
-    { key: 'sleepLegendLightGreen', color: '#4ADE80' },
-    { key: 'sleepLegendDeepGreen', color: '#16A34A' },
-  ]
+  // Use devMinutes for heatmap coloring; null → -1 (gray)
+  const heatmapData = data.data.map(cell => {
+    const value = cell.devMinutes !== null ? cell.devMinutes : -1
+    return [cell.date, value]
+  })
 
   const option = {
     tooltip: {
       formatter: (params: any) => {
         if (!params.data) return ''
-        const [date, score] = params.data
-        // 从原始数据中找到对应的 duration
-        const entry = data.data.find((d) => d[0] === date)
-        const duration = entry ? entry[2] : null
-        const dateStr = date as string
-        const scoreVal = score as number
-        let lines = `${dateStr}`
-        if (scoreVal === -1) {
-          lines += `<br/>${t('consistencyScore')}: -`
+        const [date, devVal] = params.data
+        const cell = data.data.find((c) => c.date === date)
+        if (!cell) return `${date}`
+
+        let lines = `${date}`
+        lines += `<br/>${t('sleepBed')}: ${cell.bed}`
+        lines += `<br/>${t('sleepWake')}: ${cell.wake}`
+
+        if (cell.devMinutes !== null) {
+          lines += `<br/>${t('difference')}: ${cell.devMinutes}min`
+          lines += `<br/>${t('consistencyScore')}: ${cell.score}`
         } else {
-          lines += `<br/>${t('consistencyScore')}: ${scoreVal}/7`
-        }
-        if (duration !== null) {
-          lines += `<br/>${t('duration')}: ${duration}h`
+          lines += `<br/>${t('consistencyScore')}: -`
         }
         return lines
       }
     },
     visualMap: {
       seriesIndex: 0,
-      type: 'continuous' as const,
-      min: -1,
-      max: 7,
-      inRange: {
-        color: ['#9CA3AF', '#DC2626', '#FB923C', '#FACC15', '#4ADE80', '#16A34A']
-      },
+      type: 'piecewise' as const,
+      pieces: [
+        { value: -1, color: '#e5e7eb' },
+        { min: 0, max: 10, color: '#16a34a' },
+        { min: 11, max: 25, color: '#4ade80' },
+        { min: 26, max: 45, color: '#facc15' },
+        { min: 46, max: 70, color: '#fb923c' },
+        { min: 71, color: '#ef4444' },
+      ],
       orient: 'horizontal' as const,
       left: 'center',
       bottom: 0,
@@ -168,10 +178,6 @@ export default function SleepCalendarHeatmap({ year }: Props) {
         </div>
       </div>
 
-      <div className="text-xs text-gray-400 mb-1">
-        {t('consistencyFormula')}: 7 - |{t('weekdayAvg')} - {t('weekendAvg')}|
-      </div>
-
       <ReactECharts
         option={option}
         style={{ height: 180 }}
@@ -181,7 +187,7 @@ export default function SleepCalendarHeatmap({ year }: Props) {
         <span>{data.summary.totalRecords} {t('days')}</span>
         {data.summary.avgScore !== null && (
           <span className="text-emerald-600">
-            {t('consistencyScore')}: {data.summary.avgScore}/7
+            {t('consistencyScore')}: {data.summary.avgScore}
           </span>
         )}
       </div>
@@ -205,7 +211,7 @@ export default function SleepCalendarHeatmap({ year }: Props) {
           <div className="mt-3">
             <div className="font-medium mb-2">{t('legend')}</div>
             <div className="flex flex-wrap gap-4">
-              {LEGEND_COLORS.map(item => (
+              {LEGEND_ITEMS.map(item => (
                 <div key={item.key} className="flex items-center gap-1">
                   <span
                     className="inline-block w-3 h-3 rounded-sm border border-gray-200"

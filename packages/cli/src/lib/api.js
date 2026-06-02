@@ -36,7 +36,7 @@ export async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `请求失败，状态码: ${response.status}`)
+    throw new Error(error.error_description || error.error || error.message || `请求失败，状态码: ${response.status}`)
   }
 
   return response.json()
