@@ -8,6 +8,7 @@
     "noData": "No data",
     "errorLoad": "Failed to load data. Please try again.",
     "errorSave": "Failed to save. Please try again.",
+    "invalidTimeFormat": "Invalid time format. Use HH:mm (e.g. 22:30)",
     "copy": "Copy",
     "created": "Created",
     "lastUsed": "Last used",
@@ -250,6 +251,7 @@
     "sleepLegendYellow": "Yellow (2-4)",
     "sleepLegendOrange": "Orange (1-2)",
     "sleepLegendRed": "Red (0-1)",
+    "sleepLegendNoScore": "Gray (No score yet)",
     "legend": "Legend"
   },
   "timeline": {

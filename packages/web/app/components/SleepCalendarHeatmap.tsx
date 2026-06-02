@@ -71,17 +71,20 @@ export default function SleepCalendarHeatmap({ year }: Props) {
     )
   }
 
-  // 用一致性评分做热力图数据
+  // 用一致性评分做热力图数据，score 为 null 时用 -1 标记（表示有记录但无评分）
   const heatmapData = data.data
-    .filter(([, score]) => score !== null)
-    .map(([date, score]) => [date, score])
+    .map(([date, score, duration]) => {
+      const value = score !== null ? score : -1
+      return [date, value]
+    })
 
   const LEGEND_COLORS = [
-    { key: 'sleepLegendDeepGreen', color: '#16A34A' },
-    { key: 'sleepLegendLightGreen', color: '#4ADE80' },
-    { key: 'sleepLegendYellow', color: '#FACC15' },
-    { key: 'sleepLegendOrange', color: '#FB923C' },
+    { key: 'sleepLegendNoScore', color: '#9CA3AF' },
     { key: 'sleepLegendRed', color: '#DC2626' },
+    { key: 'sleepLegendOrange', color: '#FB923C' },
+    { key: 'sleepLegendYellow', color: '#FACC15' },
+    { key: 'sleepLegendLightGreen', color: '#4ADE80' },
+    { key: 'sleepLegendDeepGreen', color: '#16A34A' },
   ]
 
   const option = {
@@ -94,7 +97,12 @@ export default function SleepCalendarHeatmap({ year }: Props) {
         const duration = entry ? entry[2] : null
         const dateStr = date as string
         const scoreVal = score as number
-        let lines = `${dateStr}<br/>${t('consistencyScore')}: ${scoreVal}/7`
+        let lines = `${dateStr}`
+        if (scoreVal === -1) {
+          lines += `<br/>${t('consistencyScore')}: -`
+        } else {
+          lines += `<br/>${t('consistencyScore')}: ${scoreVal}/7`
+        }
         if (duration !== null) {
           lines += `<br/>${t('duration')}: ${duration}h`
         }
@@ -104,10 +112,10 @@ export default function SleepCalendarHeatmap({ year }: Props) {
     visualMap: {
       seriesIndex: 0,
       type: 'continuous' as const,
-      min: 0,
+      min: -1,
       max: 7,
       inRange: {
-        color: ['#DC2626', '#FB923C', '#FACC15', '#4ADE80', '#16A34A']
+        color: ['#9CA3AF', '#DC2626', '#FB923C', '#FACC15', '#4ADE80', '#16A34A']
       },
       orient: 'horizontal' as const,
       left: 'center',

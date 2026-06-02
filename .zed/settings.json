@@ -1,3 +1,10 @@
 {
-  "context_server_timeout": 120
+  "context_server_timeout": 120,
+  "lsp": {
+    "prisma": {
+      "initialization": {
+        "ignored": ["datasource-url-deprecated"]
+      }
+    }
+  }
 }

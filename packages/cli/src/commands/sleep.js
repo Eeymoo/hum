@@ -1,5 +1,18 @@
 import { createCrudCommand } from '../lib/crud-command.js'
 
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/
+
+function validateTime(value, name) {
+  if (!value) {
+    console.error(`缺少 --${name} 参数（格式: HH:mm，例如 22:30）`)
+    process.exit(1)
+  }
+  if (!TIME_REGEX.test(value)) {
+    console.error(`--${name} 格式错误: "${value}"，应为 HH:mm（例如 22:30、06:00）`)
+    process.exit(1)
+  }
+}
+
 const sleep = createCrudCommand('sleep', {
   endpoint: '/sleeps',
   fields: [
@@ -16,6 +29,9 @@ const sleep = createCrudCommand('sleep', {
   ],
   fileFields: ['file'],
   beforeAdd(opts) {
+    validateTime(opts.bedtime, 'bedtime')
+    validateTime(opts.waketime, 'waketime')
+
     let duration = opts.duration
     if (!duration && opts.bedtime && opts.waketime) {
       const [bh, bm] = opts.bedtime.split(':').map(Number)

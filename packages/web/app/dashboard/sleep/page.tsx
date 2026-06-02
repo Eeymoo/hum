@@ -115,6 +115,16 @@ export default function SleepPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
+    const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/
+    if (!TIME_REGEX.test(formData.bedTime)) {
+      setSubmitError(`${t('bedTime')}: ${tc('invalidTimeFormat')}`)
+      return
+    }
+    if (!TIME_REGEX.test(formData.wakeTime)) {
+      setSubmitError(`${t('wakeTime')}: ${tc('invalidTimeFormat')}`)
+      return
+    }
+
     const formDataToSend = new FormData()
     formDataToSend.append('duration', formData.duration)
     formDataToSend.append('bedTime', formData.bedTime)

@@ -3,6 +3,8 @@ generator client {
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
+// prisma-lint-ignore datasource-url
+/// Prisma 7 LSP false positive: url in datasource is valid for Prisma 5
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")

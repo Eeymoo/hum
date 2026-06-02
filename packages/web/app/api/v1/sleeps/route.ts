@@ -78,8 +78,14 @@ export async function POST(request: NextRequest) {
     if (!bedTime) {
       return NextResponse.json({ error: 'bedTime is required' }, { status: 400 })
     }
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(bedTime)) {
+      return NextResponse.json({ error: 'bedTime format must be HH:mm (e.g. 22:30)' }, { status: 400 })
+    }
     if (!wakeTime) {
       return NextResponse.json({ error: 'wakeTime is required' }, { status: 400 })
+    }
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(wakeTime)) {
+      return NextResponse.json({ error: 'wakeTime format must be HH:mm (e.g. 06:30)' }, { status: 400 })
     }
     if (!qualityStr || isNaN(parseInt(qualityStr, 10))) {
       return NextResponse.json({ error: 'quality is required and must be a number' }, { status: 400 })

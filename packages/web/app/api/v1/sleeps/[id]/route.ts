@@ -72,8 +72,18 @@ export async function PATCH(
 
     const data: any = {}
     if (durationStr) data.duration = parseFloat(durationStr)
-    if (bedTime) data.bedTime = bedTime
-    if (wakeTime) data.wakeTime = wakeTime
+    if (bedTime) {
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(bedTime)) {
+        return NextResponse.json({ error: 'bedTime format must be HH:mm (e.g. 22:30)' }, { status: 400 })
+      }
+      data.bedTime = bedTime
+    }
+    if (wakeTime) {
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(wakeTime)) {
+        return NextResponse.json({ error: 'wakeTime format must be HH:mm (e.g. 06:30)' }, { status: 400 })
+      }
+      data.wakeTime = wakeTime
+    }
     if (qualityStr) data.quality = parseInt(qualityStr, 10)
     if (deepSleepStr !== undefined) data.deepSleep = deepSleepStr ? parseFloat(deepSleepStr) : null
     if (remSleepStr !== undefined) data.remSleep = remSleepStr ? parseFloat(remSleepStr) : null

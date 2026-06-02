@@ -8,6 +8,7 @@
     "noData": "暂无数据",
     "errorLoad": "加载失败，请重试。",
     "errorSave": "保存失败，请重试。",
+    "invalidTimeFormat": "时间格式错误，请使用 HH:mm 格式（如 22:30）",
     "copy": "复制",
     "created": "创建于",
     "lastUsed": "最后使用",
@@ -249,7 +250,8 @@
     "sleepLegendLightGreen": "浅绿（4-6）",
     "sleepLegendYellow": "黄色（2-4）",
     "sleepLegendOrange": "橙色（1-2）",
-    "sleepLegendRed": "红色（0-1）"
+    "sleepLegendRed": "红色（0-1）",
+    "sleepLegendNoScore": "灰色（暂无评分）"
   },
   "timeline": {
     "title": "时间线",
