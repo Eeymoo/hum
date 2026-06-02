@@ -41,17 +41,35 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 按月份计算一致性评分
-    const monthScores = new Map<number, number | null>()
-    for (let month = 0; month < 12; month++) {
+    // 按日期排序（已按 date asc 查询，dailyMap 保持插入顺序）
+    const sortedDates = Array.from(dailyMap.keys())
+
+    // 逐日计算一致性评分：忽略首日，自第二天起以滚动窗口回溯至多 7 个有效数据日
+    const scoreMap = new Map<string, number | null>()
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      const dateStr = sortedDates[i]
+
+      // 忽略首日
+      if (i === 0) {
+        scoreMap.set(dateStr, null)
+        continue
+      }
+
+      // 以当日为起点向前回溯，采集至多 7 个有效数据日（含当日）
+      const windowDays: Array<{ dateStr: string; wakeTime: string }> = []
+      for (let j = i; j >= 0 && windowDays.length < 7; j--) {
+        const d = sortedDates[j]
+        windowDays.push({ dateStr: d, wakeTime: dailyMap.get(d)!.wakeTime })
+      }
+
+      // 分离工作日和周末的起床时间
       const weekdayTimes: number[] = []
       const weekendTimes: number[] = []
 
-      dailyMap.forEach(({ wakeTime }, dateStr) => {
-        const d = new Date(dateStr)
-        if (d.getFullYear() !== year || d.getMonth() !== month) return
-
-        const [h, m] = wakeTime.split(':').map(Number)
+      for (const day of windowDays) {
+        const d = new Date(day.dateStr)
+        const [h, m] = day.wakeTime.split(':').map(Number)
         const hours = h + m / 60
         const dayOfWeek = d.getDay()
 
@@ -60,15 +78,16 @@ export async function GET(request: NextRequest) {
         } else {
           weekendTimes.push(hours)
         }
-      })
+      }
 
+      // 计算一致性评分：7 - |工作日平均起床 - 周末平均起床|（小时）
       if (weekdayTimes.length > 0 && weekendTimes.length > 0) {
         const weekdayAvg = weekdayTimes.reduce((a, b) => a + b, 0) / weekdayTimes.length
         const weekendAvg = weekendTimes.reduce((a, b) => a + b, 0) / weekendTimes.length
         const diff = Math.abs(weekdayAvg - weekendAvg)
-        monthScores.set(month, Math.max(0, Math.round((7 - diff) * 10) / 10))
+        scoreMap.set(dateStr, Math.max(0, Math.round((7 - diff) * 10) / 10))
       } else {
-        monthScores.set(month, null)
+        scoreMap.set(dateStr, null)
       }
     }
 
@@ -76,19 +95,19 @@ export async function GET(request: NextRequest) {
     const yearStart = `${year}-01-01`
     const data: Array<[string, number | null, number]> = []
 
-    const sortedDates = Array.from(dailyMap.keys()).sort()
     for (const dateStr of sortedDates) {
       if (dateStr < yearStart) continue
 
       const entry = dailyMap.get(dateStr)!
-      const month = new Date(dateStr).getMonth()
-      const score = monthScores.get(month) ?? null
+      const score = scoreMap.get(dateStr) ?? null
 
       data.push([dateStr, score, entry.duration])
     }
 
     // 汇总统计
-    const validScores = Array.from(monthScores.values()).filter((s): s is number => s !== null)
+    const validScores = data
+      .map(([, score]) => score)
+      .filter((s): s is number => s !== null)
     const avgScore = validScores.length > 0
       ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length * 10) / 10
       : null
