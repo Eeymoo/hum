@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import Card from '@/app/components/Card'
 import { useReadOnly } from '@/app/components/ReadOnlyProvider'
+import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 
 interface ExerciseDetail {
   id: string
@@ -32,6 +33,7 @@ export default function ExerciseDetailPage() {
   const t = useTranslations('exercise')
   const tc = useTranslations('common')
   const { formatDateTime } = useTimezone()
+  const readOnlyFetch = useReadOnlyFetch()
   const { isReadOnly } = useReadOnly()
   const [data, setData] = useState<ExerciseDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,7 +43,7 @@ export default function ExerciseDetailPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`/api/v1/exercises/${params.id}`)
+        const res = await readOnlyFetch(`/api/v1/exercises/${params.id}`)
         if (res.status === 404) {
           setError('not_found')
           return
@@ -65,7 +67,7 @@ export default function ExerciseDetailPage() {
     if (!confirm(t('deleteConfirm'))) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/v1/exercises/${params.id}`, { method: 'DELETE' })
+      const res = await readOnlyFetch(`/api/v1/exercises/${params.id}`, { method: 'DELETE' })
       if (res.ok) {
         router.push('/dashboard/exercise')
       }

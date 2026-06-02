@@ -35,7 +35,17 @@
     "signUp": "Sign up",
     "github": "Continue with GitHub",
     "google": "Continue with Google",
-    "orEmail": "Or continue with email"
+    "orEmail": "Or continue with email",
+    "deviceTitle": "Device Authorization",
+    "deviceCodeLabel": "Device Code",
+    "deviceDescription": "Are you trying to authorize a device?",
+    "deviceApprove": "Authorize",
+    "deviceCancel": "Cancel",
+    "deviceApproved": "Device authorized successfully! You can now return to your device.",
+    "deviceExpired": "This device code has expired. Please request a new one on your device.",
+    "deviceInvalid": "Invalid device code.",
+    "deviceLoginRequired": "Please sign in to authorize this device.",
+    "deviceGoToLogin": "Go to Login"
   },
   "register": {
     "title": "Create your account",

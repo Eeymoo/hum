@@ -27,10 +27,12 @@ export function ReadOnlyProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    // Check localStorage for saved token
+    // Check URL params first, then localStorage
+    const urlToken = new URLSearchParams(window.location.search).get('token')
     const savedToken = localStorage.getItem('readonly_token')
-    if (savedToken) {
-      verifyAndSetToken(savedToken)
+    const token = urlToken || savedToken
+    if (token) {
+      verifyAndSetToken(token)
     } else {
       setInitialized(true)
     }

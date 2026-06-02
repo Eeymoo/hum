@@ -1,12 +1,22 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ReadOnlyWatermark } from '@/app/components/ReadOnlyWatermark'
-import { ReadOnlyProvider, useReadOnly } from '@/app/components/ReadOnlyProvider'
+import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 
 // Mock useReadOnly hook
 vi.mock('@/app/components/ReadOnlyProvider', () => ({
   useReadOnly: vi.fn(),
   ReadOnlyProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+// Mock next-intl
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      readOnlyBadge: '只读模式',
+    }
+    return translations[key] ?? key
+  },
 }))
 
 describe('ReadOnly Watermark', () => {

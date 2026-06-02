@@ -35,7 +35,17 @@
     "signUp": "注册",
     "github": "使用 GitHub 登录",
     "google": "使用 Google 登录",
-    "orEmail": "或使用邮箱登录"
+    "orEmail": "或使用邮箱登录",
+    "deviceTitle": "设备授权",
+    "deviceCodeLabel": "设备码",
+    "deviceDescription": "你是否正在尝试授权一个设备？",
+    "deviceApprove": "授权",
+    "deviceCancel": "取消",
+    "deviceApproved": "设备已成功授权！请返回你的设备继续操作。",
+    "deviceExpired": "此设备码已过期，请在设备上重新获取。",
+    "deviceInvalid": "无效的设备码。",
+    "deviceLoginRequired": "请先登录以授权此设备。",
+    "deviceGoToLogin": "前往登录"
   },
   "register": {
     "title": "创建账号",

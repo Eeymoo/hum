@@ -6,9 +6,9 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 
-async function getUserId(): Promise<string | null> {
+async function getUserId(): Promise<{ userId: string; readOnly: boolean } | null> {
   const session = await auth()
-  if (session?.user?.id) return session.user.id
+  if (session?.user?.id) return { userId: session.user.id, readOnly: false }
 
   const headersList = await headers()
   const shareToken = headersList.get('x-share-token')
@@ -16,7 +16,7 @@ async function getUserId(): Promise<string | null> {
     const token = await prisma.shareToken.findUnique({
       where: { token: shareToken, deleteAt: 0 }
     })
-    if (token?.isActive) return token.userId
+    if (token?.isActive) return { userId: token.userId, readOnly: true }
   }
   return null
 }
@@ -61,10 +61,11 @@ async function getTodayData(userId: string) {
 }
 
 export default async function DashboardPage() {
-  const userId = await getUserId()
-  if (!userId) {
+  const result = await getUserId()
+  if (!result) {
     redirect('/login')
   }
+  const { userId, readOnly: isReadOnly } = result
 
   const t = await getTranslations('dashboard')
   const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(userId)
@@ -122,34 +123,36 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('quickActions')}</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/dashboard/weight" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="text-sm font-medium">{t('logWeight')}</div>
-            </Link>
-            <Link href="/dashboard/exercise" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="text-sm font-medium">{t('logExercise')}</div>
-            </Link>
-            <Link href="/dashboard/diet" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="text-sm font-medium">{t('logMeal')}</div>
-            </Link>
-            <Link href="/dashboard/sleep" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="text-sm font-medium">{t('logSleep')}</div>
-            </Link>
-          </div>
-        </Card>
+      {!isReadOnly && (
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('quickActions')}</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <Link href="/dashboard/weight" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="text-sm font-medium">{t('logWeight')}</div>
+              </Link>
+              <Link href="/dashboard/exercise" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="text-sm font-medium">{t('logExercise')}</div>
+              </Link>
+              <Link href="/dashboard/diet" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="text-sm font-medium">{t('logMeal')}</div>
+              </Link>
+              <Link href="/dashboard/sleep" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="text-sm font-medium">{t('logSleep')}</div>
+              </Link>
+            </div>
+          </Card>
 
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('recentActivity')}</h2>
-          <div className="text-sm text-gray-500">
-            <Link href="/dashboard/timeline" className="text-emerald-600 hover:text-emerald-900">
-              {t('viewAll')}
-            </Link>
-          </div>
-        </Card>
-      </div>
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('recentActivity')}</h2>
+            <div className="text-sm text-gray-500">
+              <Link href="/dashboard/timeline" className="text-emerald-600 hover:text-emerald-900">
+                {t('viewAll')}
+              </Link>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
