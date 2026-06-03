@@ -1,37 +1,63 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const t = useTranslations('login')
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 处理 NextAuth 通过 URL 重定向过来的错误（如 ?error=MissingCSRF）
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      if (errorParam === 'MissingCSRF') {
+        setError('安全验证失败(CSRF)，请刷新页面后重试')
+      } else if (errorParam === 'Configuration') {
+        setError('服务器配置错误，请联系管理员')
+      } else if (errorParam === 'CallbackRouteError') {
+        setError('登录回调失败，请重试')
+      } else {
+        setError(t('invalidCredentials'))
+      }
+    }
+  }, [searchParams, t])
+
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const result = await signIn('credentials', {
-      email: email.trim(),
-      password,
-      redirect: false,
-    })
 
-    if (result?.error) {
-      // 区分不同的错误类型
-      if (result.error === 'Configuration') {
-        setError('服务器配置错误，请联系管理员')
+    try {
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        if (result.error === 'Configuration') {
+          setError('服务器配置错误，请联系管理员')
+        } else if (result.error === 'MissingCSRF') {
+          setError('安全验证失败(CSRF)，请刷新页面后重试')
+        } else {
+          setError(t('invalidCredentials'))
+        }
+        setLoading(false)
       } else {
-        setError(t('invalidCredentials'))
+        window.location.href = '/dashboard'
       }
+    } catch (err) {
+      console.error('[Login] signIn error:', err)
+      setError('登录失败，请刷新页面后重试')
       setLoading(false)
-    } else {
-      window.location.href = '/dashboard'
     }
   }
 
@@ -127,5 +153,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
