@@ -28,19 +28,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('[Auth] Missing credentials')
           return null
         }
 
         const ip = request?.headers?.get('x-forwarded-for') || 'unknown'
         if (!rateLimit(ip, 5, 60 * 1000)) {
+          console.log('[Auth] Rate limited for IP:', ip)
           throw new Error('Too many login attempts, please try again later')
         }
 
+        const email = (credentials.email as string).trim().toLowerCase()
+        console.log('[Auth] Login attempt:', { email })
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+          where: { email }
         })
 
         if (!user) {
+          console.log('[Auth] User not found:', email)
           return null
         }
 
@@ -52,6 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
 
         if (!account || !account.password) {
+          console.log('[Auth] No credentials account for user:', email)
           return null
         }
 
@@ -61,9 +68,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
 
         if (!isValid) {
+          console.log('[Auth] Invalid password for user:', email)
           return null
         }
 
+        console.log('[Auth] Login successful:', email)
         return {
           id: user.id,
           email: user.email,

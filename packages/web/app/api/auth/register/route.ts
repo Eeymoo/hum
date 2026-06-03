@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, password, name } = body
+    const { name } = body
+    const email = (body.email as string)?.trim().toLowerCase()
+    const password = body.password as string
 
     if (!email || !password) {
       return NextResponse.json(

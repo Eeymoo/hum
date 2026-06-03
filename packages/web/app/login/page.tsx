@@ -17,13 +17,18 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     const result = await signIn('credentials', {
-      email,
+      email: email.trim(),
       password,
       redirect: false,
     })
 
     if (result?.error) {
-      setError(t('invalidCredentials'))
+      // 区分不同的错误类型
+      if (result.error === 'Configuration') {
+        setError('服务器配置错误，请联系管理员')
+      } else {
+        setError(t('invalidCredentials'))
+      }
       setLoading(false)
     } else {
       window.location.href = '/dashboard'
