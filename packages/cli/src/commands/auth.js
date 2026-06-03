@@ -31,7 +31,11 @@ auth
 
             if (tokenData.access_token) {
               config.set('accessToken', tokenData.access_token)
-              config.set('refreshToken', tokenData.refresh_token)
+              if (tokenData.refresh_token) {
+                config.set('refreshToken', tokenData.refresh_token)
+              } else {
+                config.delete('refreshToken')
+              }
               console.log('Successfully logged in!')
               return
             }
