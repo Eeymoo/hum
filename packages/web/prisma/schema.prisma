@@ -26,6 +26,7 @@ model User {
   sleeps        Sleep[]
   settings      UserSetting[]
   shareTokens   ShareToken[]
+  syncSourceConfigs SyncSourceConfig[]
   // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
   // 注意：此为 breaking change，需配合数据迁移脚本执行
   deleteAt      Int       @default(0)
@@ -105,6 +106,7 @@ model Weight {
   note        String?
   attachments String?
   extraData   String?
+  sourceId    String?  // 数据来源标识，用于同步去重
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -113,6 +115,7 @@ model Weight {
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@unique([date, sourceId])
   @@map("weights")
 }
 
@@ -130,6 +133,7 @@ model Exercise {
   note           String?
   attachments    String?
   extraData      String?
+  sourceId       String?  // 数据来源标识，用于同步去重（格式: {source}_{timestamp}）
   date           DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -139,6 +143,7 @@ model Exercise {
 
   @@index([date])
   @@index([type, date])
+  @@unique([date, sourceId])
   @@map("exercises")
 }
 
@@ -157,6 +162,7 @@ model Diet {
   note        String?
   attachments String?
   extraData   String?
+  sourceId    String?  // 数据来源标识，用于同步去重
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -165,6 +171,7 @@ model Diet {
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@unique([date, sourceId])
   @@map("diets")
 }
 
@@ -182,6 +189,7 @@ model Sleep {
   note        String?
   attachments String?
   extraData   String?
+  sourceId    String?  // 数据来源标识，用于同步去重
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -190,6 +198,7 @@ model Sleep {
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@unique([date, sourceId])
   @@map("sleeps")
 }
 
@@ -256,4 +265,63 @@ model AccessToken {
   createdAt DateTime @default(now())
 
   @@map("access_tokens")
+}
+
+// === 同步系统模型 ===
+
+model SyncSourceConfig {
+  id          String   @id @default(uuid())
+  userId      String
+  sourceId    String   // 对应 SyncSource.id，如 "mifitness"
+  enabled     Boolean  @default(false)
+  cron        String   @default("0 9 * * *") // 同步频率
+  config      String   @default("{}")  // JSON: 数据源配置（baseUrl, targetUid 等）
+  token       String?  // JSON: 加密后的认证凭证
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncJobs    SyncJob[]
+
+  @@unique([userId, sourceId])
+  @@map("sync_source_configs")
+}
+
+model SyncJob {
+  id         String        @id @default(uuid())
+  userId     String
+  sourceId   String        // 数据源 ID
+  status     String        @default("pending") // pending, running, success, failed
+  startDate  DateTime      // 同步数据起始日期
+  endDate    DateTime      // 同步数据结束日期
+  result     String?       // JSON: SyncResult
+  error      String?       // 错误信息
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime      @default(now())
+
+  sourceConfig SyncSourceConfig @relation(fields: [sourceConfigId], references: [id], onDelete: Cascade)
+  sourceConfigId String
+  logs       SyncLog[]
+
+  @@index([userId, sourceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("sync_jobs")
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  jobId     String
+  level     String   // info, warn, error
+  message   String
+  data      String?  // JSON: 附加数据
+  createdAt DateTime @default(now())
+
+  job       SyncJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+  @@map("sync_logs")
 }
