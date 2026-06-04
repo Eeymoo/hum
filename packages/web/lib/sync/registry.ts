@@ -58,6 +58,15 @@ export async function registerBuiltinSources(): Promise<void> {
   } catch (error) {
     console.warn('[SyncRegistry] 注册 MiFitnessSource 失败:', error instanceof Error ? error.message : String(error))
   }
+
+  try {
+    const { MiApiSource } = await import('./sources/miapi')
+    if (!syncRegistry.has('miapi')) {
+      syncRegistry.register(new MiApiSource())
+    }
+  } catch (error) {
+    console.warn('[SyncRegistry] 注册 MiApiSource 失败:', error instanceof Error ? error.message : String(error))
+  }
 }
 
 /**
@@ -71,6 +80,15 @@ export function registerBuiltinSourcesSync(): void {
     const { MiFitnessSource } = require('./sources/mifitness')
     if (!syncRegistry.has('mifitness')) {
       syncRegistry.register(new MiFitnessSource())
+    }
+  } catch {
+    // 忽略
+  }
+
+  try {
+    const { MiApiSource } = require('./sources/miapi')
+    if (!syncRegistry.has('miapi')) {
+      syncRegistry.register(new MiApiSource())
     }
   } catch {
     // 忽略

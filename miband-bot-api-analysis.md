@@ -177,7 +177,7 @@ function generateNonce(): string {
 /**
  * 计算签名 nonce（用于 RC4 密钥派生）
  * signed_nonce = base64(SHA256(b64decode(ssecurity) + b64decode(nonce)))
- * 
+ *
  * ssecurity: 登录时小米服务器返回的 Base64 编码密钥
  */
 function computeSignedNonce(ssecurity: string, nonce: string): string {
@@ -207,7 +207,7 @@ function buildSigMessage(
 ): string {
   const parts: string[] = [method.toUpperCase()];
   parts.push(urlPath.startsWith('/') ? urlPath : '/' + urlPath);
-  
+
   // 按 key 字典序排序
   for (const k of Object.keys(params).sort()) {
     parts.push(`${k}=${params[k]}`);
@@ -222,7 +222,7 @@ function buildSigMessage(
 ```typescript
 /**
  * 构建完整的加密请求参数（对应 App 中 ua4.c 方法）
- * 
+ *
  * 流程:
  * 1. 生成 nonce，计算 signed_nonce = base64(SHA256(ssecurity + nonce))
  * 2. 构建原始参数 TreeMap（排除空 key/value）
@@ -293,7 +293,7 @@ function buildAuthCookies(token: AuthToken): Record<string, string> {
 ```typescript
 /**
  * 发送 RC4 加密的 API 请求并解密响应
- * 
+ *
  * 核心流程:
  * 1. 调用 build_encrypted_params 生成加密参数
  * 2. 通过 Cookie (cUserId + serviceToken) 发送请求
@@ -330,7 +330,7 @@ async function encryptedRequest(
 
   // 解密响应
   const result = decryptResponse(token.ssecurity, nonce, resp.data);
-  
+
   // 检查业务码
   const code = parseInt(result.code ?? -1);
   if (code !== 0) {
@@ -345,16 +345,16 @@ async function encryptedRequest(
 ```typescript
 /**
  * 二维码扫码登录流程
- * 
+ *
  * Step 1: 获取二维码信息
  *   GET https://account.xiaomi.com/longPolling/loginUrl
  *   参数: sid=miothealth, _qrsize=480
  *   返回: {qr: 图片URL, loginUrl: 登录链接, lp: 长轮询URL}
- * 
+ *
  * Step 2: 长轮询等待扫码
  *   GET {lp} (长轮询 URL)
  *   超时: 默认 300 秒
- * 
+ *
  * Step 3: 提取凭证
  *   从响应中提取 {ssecurity, userId, passToken, cUserId, location}
  *   跟随 location 重定向获取 serviceToken
@@ -379,17 +379,17 @@ async function loginQr(
     params: qrParams,
   });
   const qrData = parseMiResponse(resp.data);  // 去除 &&&START&&& 前缀
-  
+
   const qrImageUrl = qrData.qr;
   const longPollingUrl = qrData.lp;
-  
+
   // 展示二维码
   if (qrCallback) await qrCallback(qrImageUrl, qrData.loginUrl);
-  
+
   // Step 2: 长轮询等待扫码
   const resp2 = await http.get(longPollingUrl, { timeout: 60 });
   const data = parseMiResponse(resp2.data);
-  
+
   // Step 3: 提取凭证
   await extractCredentials(http, data, token);
 }
@@ -400,9 +400,9 @@ async function loginQr(
 ```typescript
 /**
  * 使用 passToken 换取完整登录凭证
- * 
+ *
  * 适用场景: 已有 passToken（从浏览器 Cookie 或历史登录中提取）
- * 
+ *
  * 流程:
  * 1. 设置 passToken + deviceId + userId Cookie
  * 2. 调用 serviceLogin（带上 passToken cookie 直接返回凭证）
@@ -456,7 +456,7 @@ async function loginPassToken(
 ```typescript
 /**
  * 获取亲友的聚合数据（按天汇总）
- * 
+ *
  * 支持的 key 值:
  * - "heart_rate" - 心率日汇总
  * - "sleep" - 睡眠日汇总
@@ -465,7 +465,7 @@ async function loginPassToken(
  * - "valid_stand" - 有效站立日汇总
  * - "intensity" - 中高强度活动日汇总
  * - "spo2" - 血氧日汇总
- * 
+ *
  * tag: 默认为 "daily_report"
  */
 async function getAggregatedData(
@@ -494,7 +494,7 @@ async function getAggregatedData(
 ```typescript
 /**
  * 获取原始测量/事件数据（非按天聚合，每次测量一条记录）
- * 
+ *
  * 支持的 key 值:
  * - "weight" - 体重测量
  * - "blood_pressure" - 血压测量
@@ -702,25 +702,25 @@ model Exercise {
   id          String   @id @default(cuid())
   userId      String   // 关联用户 ID
   date        DateTime @db.Date
-  
+
   // 步数字段 (from StepData)
   steps       Int      @default(0)
   distance    Int      @default(0)  // 米
   stepGoal    Int      @default(0)  // 目标步数
-  
+
   // 卡路里字段 (from CaloriesData)
   calories    Int      @default(0)  // 活动卡路里
   calorieGoal Int      @default(0)
-  
+
   // 中高强度活动 (from IntensityData)
   intensityDuration Int @default(0) // 分钟
-  
+
   // 有效站立 (from ValidStandData)
   validStandCount Int @default(0)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@index([userId, date])
 }
 
@@ -729,7 +729,7 @@ model Sleep {
   id                String   @id @default(cuid())
   userId            String
   date              DateTime @db.Date
-  
+
   // 基础指标 (from SleepData)
   totalDuration     Int      @default(0)  // 总睡眠时长（分钟）
   sleepScore        Int?     // 睡眠评分 0-100
@@ -738,21 +738,21 @@ model Sleep {
   remDuration       Int      @default(0)  // REM（分钟）
   awakeDuration     Int      @default(0)  // 清醒（分钟）
   awakeCount        Int      @default(0)  // 醒来次数
-  
+
   // 心率指标
   avgHr             Int?     // 睡眠平均心率
   maxHr             Int?     // 睡眠最大心率
   minHr             Int?     // 睡眠最小心率
-  
+
   // 血氧指标
   avgSpo2           Int?     // 睡眠平均血氧
-  
+
   // 原始片段 JSON
   segmentsJson      String?  @db.Text  // SleepSegment[] JSON
-  
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  
+
   @@index([userId, date])
 }
 
@@ -761,27 +761,27 @@ model HeartRate {
   id                    String   @id @default(cuid())
   userId                String
   date                  DateTime @db.Date
-  
+
   // 日汇总 (from HeartRateData)
   avgHr                 Int?     // 日均心率
   restingHr             Int?     // 日均静息心率
   maxHr                 Int?     // 最大心率
   minHr                 Int?     // 最小心率
-  
+
   // 区间时长（分钟）
   warmUpZoneDuration    Int @default(0)
   fatBurningZoneDuration Int @default(0)
   aerobicZoneDuration   Int @default(0)
   anaerobicZoneDuration Int @default(0)
   extremeZoneDuration   Int @default(0)
-  
+
   // 最新采样
   latestBpm             Int?     // 最新心率值
   latestTime            DateTime? // 最新采样时间
-  
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  
+
   @@index([userId, date])
 }
 
@@ -793,9 +793,9 @@ model Weight {
   weight    Float    // 千克
   bmi       Float?
   source    String   @default("xiaomi") // 数据来源
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([userId, timestamp])
 }
 
@@ -808,9 +808,9 @@ model BloodPressure {
   diastolic  Int      // 舒张压（低压）
   pulse      Int?     // 脉搏
   source     String   @default("xiaomi")
-  
+
   createdAt  DateTime @default(now())
-  
+
   @@index([userId, timestamp])
 }
 
@@ -819,20 +819,20 @@ model Spo2 {
   id           String   @id @default(cuid())
   userId       String
   date         DateTime @db.Date
-  
+
   // 日汇总 (from Spo2SummaryData)
   avgSpo2      Int?
   maxSpo2      Int?
   minSpo2      Int?
   lackSpo2Count Int @default(0) // 低血氧次数
-  
+
   // 最新采样
   latestSpo2   Int?
   latestTime   DateTime?
-  
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
+
   @@index([userId, date])
 }
 ```
@@ -940,7 +940,7 @@ python -m mi_fitness hr --token ~/.mi_token.json --uid 12345678 --days 7 --json
 /**
  * 将 Python SDK 封装为独立 HTTP 服务
  * Node.js 通过 REST API 调用
- * 
+ *
  * 架构:
  * ┌──────────┐    HTTP    ┌──────────────────┐    RC4    ┌──────────────┐
  * │ Hum API  │ ◀────────▶ │ mi-fitness-proxy │ ◀───────▶ │ 小米健康 API  │
@@ -977,7 +977,7 @@ async def get_daily_summary(uid: int, date: str, token: str):
  * 将核心签名算法移植为 TypeScript 模块
  * 优点: 无 Python 依赖，可集成到 Hum 现有代码库
  * 工作量: 约 1-2 周
- * 
+ *
  * 需移植的文件（按优先级）:
  * 1. crypto.ts  - RC4 + SHA1 签名（约 200 行）
  * 2. base.ts    - encrypted_request 封装（约 150 行）
