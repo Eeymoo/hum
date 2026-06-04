@@ -1,6 +1,6 @@
 {
   "name": "@hum/web",
-  "version": "0.1.31-alpha.3",
+  "version": "0.1.31-alpha.4",
   "private": true,
   "scripts": {
     "dev": "node scripts/prisma-switch.js && next dev",
