@@ -6,7 +6,7 @@ const syncCmd = new Command('sync')
 
 syncCmd
   .description('手动触发数据同步')
-  .option('-s, --source <sourceId>', '指定同步源（默认: mifitness）', 'mifitness')
+  .option('-s, --source <sourceId>', '指定同步源（默认: miapi）', 'miapi')
   .option('--start <date>', '同步起始日期 (YYYY-MM-DD)')
   .option('--end <date>', '同步结束日期 (YYYY-MM-DD)')
   .option('--login', '重新登录获取 Token')
@@ -77,8 +77,7 @@ async function showSyncStatus(apiUrl, apiKey, sourceId) {
 }
 
 async function doLogin(apiUrl, apiKey, sourceId) {
-  console.log(`正在发起 ${sourceId} 二维码登录...`)
-  console.log('请在终端中查看二维码信息，并使用小米账号 App 扫码')
+  console.log(`正在发起 ${sourceId} 登录...`)
   console.log()
 
   try {

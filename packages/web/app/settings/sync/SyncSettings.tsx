@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
+// === 类型定义 ===
+
 interface SourceInfo {
   id: string
   name: string
@@ -17,14 +19,24 @@ interface SourceInfo {
   }[]
 }
 
-interface SyncConfig {
+interface UserSyncConfig {
+  enabled: boolean
+  provider: string | null
+  providerConfig: {
+    sourceId?: string
+    cron?: string
+    config?: Record<string, unknown>
+  }
+}
+
+interface SourceConfig {
   id: string
   sourceId: string
-  enabled: boolean
   cron: string
   config: Record<string, unknown>
   lastSyncAt: string | null
   hasToken: boolean
+  createdAt: string
 }
 
 interface SyncJob {
@@ -42,19 +54,23 @@ interface SyncJob {
 }
 
 export default function SyncSettings() {
+  const [userConfig, setUserConfig] = useState<UserSyncConfig>({
+    enabled: false,
+    provider: null,
+    providerConfig: {},
+  })
   const [sources, setSources] = useState<SourceInfo[]>([])
-  const [configs, setConfigs] = useState<SyncConfig[]>([])
+  const [sourceConfigs, setSourceConfigs] = useState<SourceConfig[]>([])
   const [jobs, setJobs] = useState<SyncJob[]>([])
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
   const [logging, setLogging] = useState(false)
   const [loginMessage, setLoginMessage] = useState('')
-  const [editConfigs, setEditConfigs] = useState<Record<string, Record<string, string>>>({})
-  const [qrState, setQrState] = useState<{ sourceId: string; qrUrl: string; longPollingUrl: string } | null>(null)
+  const [editConfig, setEditConfig] = useState<Record<string, string>>({})
 
   const loadData = useCallback(async () => {
     try {
-      const [sourcesRes, configsRes, jobsRes] = await Promise.all([
+      const [sourcesRes, configRes, jobsRes] = await Promise.all([
         fetch('/api/v1/sync/sources'),
         fetch('/api/v1/sync/config'),
         fetch('/api/v1/sync/jobs?limit=5'),
@@ -64,20 +80,18 @@ export default function SyncSettings() {
         const data = await sourcesRes.json()
         setSources(data.sources || [])
       }
-      if (configsRes.ok) {
-        const data = await configsRes.json()
-        const configsData = data.configs || []
-        setConfigs(configsData)
+      if (configRes.ok) {
+        const data = await configRes.json()
+        setUserConfig(data.userConfig || { enabled: false, provider: null, providerConfig: {} })
+        setSourceConfigs(data.sourceConfigs || [])
 
         // 初始化编辑状态
-        const initialEdits: Record<string, Record<string, string>> = {}
-        for (const cfg of configsData) {
-          initialEdits[cfg.sourceId] = {
-            ...(cfg.config as Record<string, string>),
-            cron: cfg.cron,
-          }
+        const sc = (data.sourceConfigs || []).find((s: SourceConfig) => s.sourceId === 'miapi')
+        const initial: Record<string, string> = {
+          ...(sc?.config as Record<string, string> || {}),
+          cron: sc?.cron || '0 9 * * *',
         }
-        setEditConfigs(initialEdits)
+        setEditConfig(initial)
       }
       if (jobsRes.ok) {
         const data = await jobsRes.json()
@@ -94,70 +108,44 @@ export default function SyncSettings() {
     loadData()
   }, [loadData])
 
-  const getConfig = (sourceId: string): SyncConfig | undefined => {
-    return configs.find(c => c.sourceId === sourceId)
-  }
+  // === 获取当前 sourceId 和 source 信息 ===
 
-  // Step 1: 获取二维码
-  const handleLogin = async (sourceId: string) => {
-    setLogging(true)
-    setLoginMessage('')
+  const currentSourceId = 'miapi'
+
+  const currentSource = sources.find(s => s.id === currentSourceId)
+
+  const currentSourceConfig = sourceConfigs.find(sc => sc.sourceId === currentSourceId)
+
+  // === 操作处理 ===
+
+  const handleToggle = async (enabled: boolean) => {
     try {
-      const res = await fetch('/api/v1/sync/login', {
+      const res = await fetch('/api/v1/sync/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId }),
+        body: JSON.stringify({ action: 'toggle', enabled }),
       })
-      const data = await res.json()
-      if (res.ok && data.step === 'scan') {
-        setQrState({ sourceId, qrUrl: data.qrUrl, longPollingUrl: data.longPollingUrl })
-        setLoginMessage('请使用小米账号 App 扫描二维码')
-      } else {
-        setLoginMessage(`获取二维码失败: ${data.error}`)
-      }
-    } catch (error: any) {
-      setLoginMessage(`获取二维码失败: ${error.message}`)
-    } finally {
-      setLogging(false)
-    }
-  }
-
-  // Step 2: 确认扫码完成（轮询）
-  const handleConfirmScan = async () => {
-    if (!qrState) return
-    setLogging(true)
-    try {
-      const res = await fetch('/api/v1/sync/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: qrState.sourceId, longPollingUrl: qrState.longPollingUrl }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setLoginMessage(`${qrState.sourceId}: 登录成功`)
-        setQrState(null)
+      if (res.ok) {
         await loadData()
-      } else {
-        setLoginMessage(`登录失败: ${data.error}，请重试`)
+        if (!enabled) {
+          setLoginMessage('')
+        }
       }
-    } catch (error: any) {
-      setLoginMessage(`登录失败: ${error.message}`)
-    } finally {
-      setLogging(false)
+    } catch (error) {
+      console.error('切换同步开关失败:', error)
     }
   }
 
-  const handleSaveConfig = async (sourceId: string) => {
-    const edits = editConfigs[sourceId] || {}
-    const { cron, ...config } = edits
+  const handleSaveConfig = async () => {
+    const { cron, ...config } = editConfig
 
     try {
       const res = await fetch('/api/v1/sync/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourceId,
-          enabled: getConfig(sourceId)?.enabled ?? false,
+          action: 'save_config',
+          sourceId: 'miapi',
           cron: cron || '0 9 * * *',
           config,
         }),
@@ -170,31 +158,42 @@ export default function SyncSettings() {
     }
   }
 
-  const handleToggleEnabled = async (sourceId: string, enabled: boolean) => {
-    const edits = editConfigs[sourceId] || {}
-    const { cron, ...config } = edits
-
+  const handleLogin = async () => {
+    setLogging(true)
+    setLoginMessage('')
     try {
-      const res = await fetch('/api/v1/sync/config', {
+      const res = await fetch('/api/v1/sync/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId, enabled, cron: cron || '0 9 * * *', config }),
+        body: JSON.stringify({
+          sourceId: 'miapi',
+          credentials: {
+            username: editConfig.username,
+            password: editConfig.password,
+          },
+        }),
       })
-      if (res.ok) {
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setLoginMessage('登录成功')
         await loadData()
+      } else {
+        setLoginMessage(`登录失败: ${data.error}`)
       }
-    } catch (error) {
-      console.error('更新状态失败:', error)
+    } catch (error: any) {
+      setLoginMessage(`登录失败: ${error.message}`)
+    } finally {
+      setLogging(false)
     }
   }
 
-  const handleTriggerSync = async (sourceId: string) => {
-    setSyncing(sourceId)
+  const handleTriggerSync = async () => {
+    setSyncing(true)
     try {
       const res = await fetch('/api/v1/sync/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId }),
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (res.ok) {
@@ -207,136 +206,131 @@ export default function SyncSettings() {
     } catch (error: any) {
       alert(`同步失败: ${error.message}`)
     } finally {
-      setSyncing(null)
+      setSyncing(false)
     }
   }
+
+  // === 渲染 ===
 
   if (loading) {
     return <div className="text-gray-500 text-sm">加载中...</div>
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* 消息提示 */}
       {loginMessage && (
-        <div className={`text-sm p-3 rounded-md ${loginMessage.includes('成功') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`text-sm p-3 rounded-md ${
+          loginMessage.includes('成功')
+            ? 'bg-green-50 text-green-700'
+            : 'bg-red-50 text-red-700'
+        }`}>
           {loginMessage}
         </div>
       )}
 
-      {sources.map(source => {
-        const config = getConfig(source.id)
-        const edits = editConfigs[source.id] || {}
+      {/* === 第一段：总开关 === */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-medium text-gray-900">启用数据同步</h3>
+          <p className="text-sm text-gray-500">开启后可从小米健康同步步数、心率、睡眠、体重等数据</p>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={userConfig.enabled}
+            onChange={(e) => handleToggle(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
 
-        return (
-          <div key={source.id} className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-base font-medium text-gray-900">{source.name}</h3>
-                <p className="text-sm text-gray-500">{source.description}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleTriggerSync(source.id)}
-                  disabled={!!syncing || !config?.hasToken}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {syncing === source.id ? '同步中...' : '立即同步'}
-                </button>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={config?.enabled ?? false}
-                    onChange={(e) => handleToggleEnabled(source.id, e.target.checked)}
-                    disabled={!config?.hasToken}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
-              </div>
+      {/* enabled=false 时到此为止 */}
+      {!userConfig.enabled && (
+        <p className="text-sm text-gray-400 text-center py-4">
+          请先开启数据同步开关
+        </p>
+      )}
+
+      {/* === MiApi 配置表单 === */}
+      {userConfig.enabled && currentSource && (
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-medium text-gray-900">{currentSource.name}</h3>
+              <p className="text-sm text-gray-500">{currentSource.description}</p>
             </div>
-
-            {!config?.hasToken && !qrState?.sourceId?.startsWith(source.id) ? (
-              <div className="mb-3">
-                <button
-                  onClick={() => handleLogin(source.id)}
-                  disabled={logging}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md border border-emerald-600 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
-                >
-                  {logging ? '获取二维码...' : '登录绑定账号'}
-                </button>
-                <p className="text-xs text-gray-400 mt-1">
-                  请先登录绑定账号后才能启用同步
-                </p>
-              </div>
-            ) : !config?.hasToken ? (
-              <div className="mb-3 p-3 bg-blue-50 rounded-md">
-                <p className="text-sm text-blue-700 mb-2">{loginMessage}</p>
-                {qrState?.qrUrl && (
-                  <img src={qrState.qrUrl} alt="QR Code" className="w-48 h-48 mx-auto mb-2" />
-                )}
-                <button
-                  onClick={handleConfirmScan}
-                  disabled={logging}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {logging ? '等待扫码...' : '我已扫码，确认登录'}
-                </button>
-                <button
-                  onClick={() => { setQrState(null); setLoginMessage('') }}
-                  className="ml-2 px-3 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700"
-                >
-                  取消
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                  已绑定
-                </span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {source.configSchema.map(field => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <input
-                    type={field.type === 'password' ? 'password' : 'text'}
-                    value={edits[field.key] || field.defaultValue || ''}
-                    onChange={(e) =>
-                      setEditConfigs(prev => ({
-                        ...prev,
-                        [source.id]: { ...prev[source.id], [field.key]: e.target.value },
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-3 flex items-center justify-between">
-              <button
-                onClick={() => handleSaveConfig(source.id)}
-                className="px-3 py-1.5 text-sm font-medium rounded-md text-emerald-600 border border-emerald-600 hover:bg-emerald-50"
-              >
-                保存配置
-              </button>
-              {config?.lastSyncAt && (
-                <span className="text-xs text-gray-400">
-                  最后同步: {new Date(config.lastSyncAt).toLocaleString()}
-                </span>
-              )}
-            </div>
+            <button
+              onClick={handleTriggerSync}
+              disabled={syncing || !currentSourceConfig?.hasToken}
+              className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {syncing ? '同步中...' : '立即同步'}
+            </button>
           </div>
-        )
-      })}
 
-      {/* 同步历史 */}
+          {/* 认证状态 */}
+          {currentSourceConfig?.hasToken ? (
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                已绑定
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mb-4">
+              请先登录并保存配置
+            </p>
+          )}
+
+          {/* 配置字段 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {currentSource.configSchema.map(field => (
+              <div key={field.key}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                <input
+                  type={field.type === 'password' ? 'password' : 'text'}
+                  value={editConfig[field.key] || field.defaultValue || ''}
+                  onChange={(e) =>
+                    setEditConfig(prev => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  placeholder={field.placeholder}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* 登录 + 保存按钮 */}
+          <div className="mt-4 flex items-center gap-3">
+            {!currentSourceConfig?.hasToken && (
+              <button
+                onClick={handleLogin}
+                disabled={logging}
+                className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {logging ? '登录中...' : '登录'}
+              </button>
+            )}
+            <button
+              onClick={handleSaveConfig}
+              className="px-3 py-1.5 text-sm font-medium rounded-md text-emerald-600 border border-emerald-600 hover:bg-emerald-50"
+            >
+              保存配置
+            </button>
+            {currentSourceConfig?.lastSyncAt && (
+              <span className="text-xs text-gray-400 ml-auto">
+                最后同步: {new Date(currentSourceConfig.lastSyncAt).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* === 同步历史 === */}
       {jobs.length > 0 && (
         <div className="mt-6">
           <h3 className="text-base font-medium text-gray-900 mb-3">同步历史</h3>
@@ -381,12 +375,6 @@ export default function SyncSettings() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {sources.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
-          暂无可用的同步数据源
         </div>
       )}
     </div>

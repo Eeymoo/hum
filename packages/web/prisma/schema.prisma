@@ -26,6 +26,7 @@ model User {
   sleeps        Sleep[]
   settings      UserSetting[]
   shareTokens   ShareToken[]
+  syncConfig      UserSyncConfig?
   syncSourceConfigs SyncSourceConfig[]
   // TODO: 后续迁移计划 — 将 deleteAt 从 Int 改为 DateTime? 以支持更精确的软删除时间戳
   // 注意：此为 breaking change，需配合数据迁移脚本执行
@@ -269,11 +270,24 @@ model AccessToken {
 
 // === 同步系统模型 ===
 
+model UserSyncConfig {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  enabled        Boolean  @default(false)   // 总开关：是否启用同步
+  provider       String?  // 当前绑定的同步系统（单选）: XIAOMI / HUAWEI / OPPO / VIVO
+  providerConfig String   @default("{}")    // JSON: 当前 provider 的配置数据（cron, config 等）
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sync_configs")
+}
+
 model SyncSourceConfig {
   id          String   @id @default(uuid())
   userId      String
-  sourceId    String   // 对应 SyncSource.id，如 "mifitness"
-  enabled     Boolean  @default(false)
+  sourceId    String   // 对应 SyncSource.id，如 "miapi"
   cron        String   @default("0 9 * * *") // 同步频率
   config      String   @default("{}")  // JSON: 数据源配置（baseUrl, targetUid 等）
   token       String?  // JSON: 加密后的认证凭证

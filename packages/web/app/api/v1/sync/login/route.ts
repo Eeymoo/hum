@@ -6,16 +6,8 @@ import { syncRegistry, registerBuiltinSources } from '@/lib/sync/registry'
 /**
  * POST /api/v1/sync/login
  *
- * 支持两种登录模式：
- *
- * 模式 A — 二维码登录（如 mifitness）：
- *   Step 1: POST { sourceId } → 获取二维码 URL
- *     Response: { qrUrl, longPollingUrl, step: "scan" }
- *   Step 2: POST { sourceId, longPollingUrl } → 等待扫码并保存 Token
- *     Response: { success: true } 或 { error: "...", step: "retry" }
- *
- * 模式 B — 密码登录（如 miapi）：
- *   POST { sourceId, credentials: { username, password } } → 登录并保存 Token
+ * 密码登录（miapi）：
+ *   POST { sourceId?, credentials: { username, password } } → 登录并保存 Token
  *   Response: { success: true } 或 { error: "...", step: "retry" }
  */
 export async function POST(req: NextRequest) {
@@ -25,10 +17,31 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { sourceId, longPollingUrl, credentials } = body
+  const sourceId = body.sourceId || 'miapi'
+  const { credentials } = body
 
-  if (!sourceId) {
-    return NextResponse.json({ error: 'sourceId is required' }, { status: 400 })
+  if (!credentials || typeof credentials !== 'object' || !credentials.username || !credentials.password) {
+    return NextResponse.json(
+      { error: 'credentials (username, password) is required' },
+      { status: 400 },
+    )
+  }
+
+  // 校验 UserSyncConfig：enabled=true
+  const userConfig = await prisma.userSyncConfig.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!userConfig || !userConfig.enabled) {
+    return NextResponse.json({ error: '同步功能未开启' }, { status: 400 })
+  }
+
+  // sourceId 只允许 miapi
+  if (sourceId !== 'miapi') {
+    return NextResponse.json(
+      { error: `不支持的数据源: ${sourceId}` },
+      { status: 400 },
+    )
   }
 
   await registerBuiltinSources()
@@ -37,23 +50,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unknown source: ${sourceId}` }, { status: 400 })
   }
 
-  // 构建传给 authenticate 的参数
-  const authCredentials: Record<string, unknown> = {}
-
   try {
-    // 模式 A - Step 2: 有 longPollingUrl → 长轮询等待扫码
-    if (longPollingUrl) {
-      authCredentials.longPollingUrl = longPollingUrl
-    }
+    const token = await source.authenticate(credentials)
 
-    // 模式 B: 密码登录，credentials 包含 username/password 等字段
-    if (credentials && typeof credentials === 'object') {
-      Object.assign(authCredentials, credentials)
-    }
-
-    const token = await source.authenticate(authCredentials)
-
-    // 保存 token 到 SyncSourceConfig
     await prisma.syncSourceConfig.upsert({
       where: {
         userId_sourceId: {
@@ -67,25 +66,11 @@ export async function POST(req: NextRequest) {
       create: {
         userId: session.user.id,
         sourceId,
-        enabled: false,
         token: JSON.stringify(token),
       },
     })
 
-    // 模式 A - Step 1: 二维码登录首次调用，返回二维码信息
-    if (!longPollingUrl && !credentials && token.qrUrl) {
-      return NextResponse.json({
-        step: 'scan',
-        qrUrl: token.qrUrl,
-        longPollingUrl: token.longPollingUrl,
-      })
-    }
-
-    // 登录成功（密码登录 或 扫码完成）
-    return NextResponse.json({
-      success: true,
-      message: '登录成功，Token 已保存',
-    })
+    return NextResponse.json({ success: true, message: '登录成功，Token 已保存' })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message, step: 'retry' },

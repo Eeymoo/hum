@@ -4,10 +4,7 @@ import type { AuthToken, SyncSource, SyncOptions, SyncResult, SyncError, ConfigF
 // ============================================================
 // MiApiSource - 小米运动健康 API 数据源（密码登录 + 直接 API）
 //
-// 基于 miapi.md 方案 B：直接调用小米健康 API（无加密）
-// 与 mifitness.ts 的区别：
-// - 认证方式：密码登录（非扫码）
-// - API 调用：直接 GET + Cookie 认证（非 RC4 加密）
+// 基于 miapi.md：直接调用小米健康 API，密码登录 + Cookie 认证（无加密）
 // - Base URL：https://hlth.io.mi.com （国内）
 // ============================================================
 

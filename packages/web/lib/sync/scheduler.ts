@@ -8,10 +8,8 @@ registerBuiltinSources()
 /**
  * SyncScheduler - 基于 node-cron 的定时同步调度器
  *
- * 在 Next.js 服务启动时初始化，读取所有已启用的同步源配置，
- * 为每个配置创建对应的 cron 定时任务。
- *
- * 新增数据源时无需修改此文件，调度器会自动读取新的 SyncSourceConfig。
+ * 在 Next.js 服务启动时初始化，读取所有 enabled=true 的 UserSyncConfig，
+ * 为每个用户的当前 provider 创建对应的 cron 定时任务（单 provider 架构）。
  */
 
 let cron: typeof import('node-cron') | null = null
@@ -30,16 +28,26 @@ export async function initScheduler(): Promise<void> {
 
   console.log('[SyncScheduler] 初始化定时同步调度器...')
 
-  // 加载所有已启用的同步配置
-  const configs = await prisma.syncSourceConfig.findMany({
-    where: { enabled: true },
+  // 加载所有已启用同步的用户配置
+  const userConfigs = await prisma.userSyncConfig.findMany({
+    where: {
+      enabled: true,
+    },
   })
 
-  for (const config of configs) {
-    scheduleTask(config.id, config.cron, config.userId, config.sourceId)
+  const sourceId = 'miapi'
+
+  for (const uc of userConfigs) {
+    const sourceConfig = await prisma.syncSourceConfig.findUnique({
+      where: { userId_sourceId: { userId: uc.userId, sourceId } },
+    })
+
+    if (sourceConfig?.token) {
+      scheduleTask(sourceConfig.id, sourceConfig.cron, uc.userId, sourceId)
+    }
   }
 
-  console.log(`[SyncScheduler] 已加载 ${configs.length} 个定时同步任务`)
+  console.log(`[SyncScheduler] 已加载 ${scheduledTasks.size} 个定时同步任务`)
 }
 
 /**

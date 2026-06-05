@@ -50,16 +50,6 @@ export async function registerBuiltinSources(): Promise<void> {
   _registered = true
 
   try {
-    // 动态 import 确保 webpack 能正确打包
-    const { MiFitnessSource } = await import('./sources/mifitness')
-    if (!syncRegistry.has('mifitness')) {
-      syncRegistry.register(new MiFitnessSource())
-    }
-  } catch (error) {
-    console.warn('[SyncRegistry] 注册 MiFitnessSource 失败:', error instanceof Error ? error.message : String(error))
-  }
-
-  try {
     const { MiApiSource } = await import('./sources/miapi')
     if (!syncRegistry.has('miapi')) {
       syncRegistry.register(new MiApiSource())
@@ -75,15 +65,6 @@ export async function registerBuiltinSources(): Promise<void> {
 export function registerBuiltinSourcesSync(): void {
   if (_registered) return
   _registered = true
-
-  try {
-    const { MiFitnessSource } = require('./sources/mifitness')
-    if (!syncRegistry.has('mifitness')) {
-      syncRegistry.register(new MiFitnessSource())
-    }
-  } catch {
-    // 忽略
-  }
 
   try {
     const { MiApiSource } = require('./sources/miapi')
