@@ -324,11 +324,12 @@ export class MiApiSource implements SyncSource {
   ]
 
   /**
-   * 密码登录认证
+   * 认证
    *
-   * credentials 参数支持两种模式：
-   * 1. { username, password } → 执行完整登录流程
-   * 2. { refresh: true, ...token } → 刷新已过期的 serviceToken
+   * credentials 参数支持三种模式：
+   * 1. { username, password } → 密码登录（完整流程）
+   * 2. { service_token, c_user_id, user_id? } → 手动导入 Token（跳过登录）
+   * 3. { refresh: true, ...token } → 刷新已过期的 serviceToken
    */
   async authenticate(credentials: Record<string, unknown>): Promise<AuthToken> {
     // 刷新模式
@@ -340,12 +341,29 @@ export class MiApiSource implements SyncSource {
       }
     }
 
-    // 登录模式
+    // 手动导入 Token 模式（兜底方案）
+    // 必填: service_token, c_user_id
+    // 可选: pass_token, user_id, device_id（有 pass_token 时支持自动刷新）
+    const serviceToken = String(credentials.service_token || '')
+    const cUserId = String(credentials.c_user_id || '')
+    if (serviceToken && cUserId) {
+      return {
+        user_id: String(credentials.user_id || ''),
+        c_user_id: cUserId,
+        service_token: serviceToken,
+        ssecurity: '',
+        pass_token: String(credentials.pass_token || ''),
+        device_id: String(credentials.device_id || generateDeviceId()),
+        accessToken: serviceToken,
+      }
+    }
+
+    // 密码登录模式
     const username = String(credentials.username || '')
     const password = String(credentials.password || '')
 
     if (!username || !password) {
-      throw new Error('请提供小米账号和密码')
+      throw new Error('请提供小米账号和密码，或手动导入 serviceToken/cUserId')
     }
 
     const token = await loginByPassword(username, password)

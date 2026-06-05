@@ -53,6 +53,8 @@ interface SyncJob {
   createdAt: string
 }
 
+type LoginMode = 'password' | 'token'
+
 export default function SyncSettings() {
   const [userConfig, setUserConfig] = useState<UserSyncConfig>({
     enabled: false,
@@ -67,6 +69,14 @@ export default function SyncSettings() {
   const [logging, setLogging] = useState(false)
   const [loginMessage, setLoginMessage] = useState('')
   const [editConfig, setEditConfig] = useState<Record<string, string>>({})
+  const [loginMode, setLoginMode] = useState<LoginMode>('password')
+  const [manualToken, setManualToken] = useState({
+    service_token: '',
+    c_user_id: '',
+    pass_token: '',
+    user_id: '',
+    device_id: '',
+  })
 
   const loadData = useCallback(async () => {
     try {
@@ -162,26 +172,31 @@ export default function SyncSettings() {
     setLogging(true)
     setLoginMessage('')
     try {
+      const credentials =
+        loginMode === 'token'
+          ? {
+              service_token: manualToken.service_token,
+              c_user_id: manualToken.c_user_id,
+              ...(manualToken.pass_token ? { pass_token: manualToken.pass_token } : {}),
+              ...(manualToken.user_id ? { user_id: manualToken.user_id } : {}),
+              ...(manualToken.device_id ? { device_id: manualToken.device_id } : {}),
+            }
+          : { username: editConfig.username, password: editConfig.password }
+
       const res = await fetch('/api/v1/sync/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceId: 'miapi',
-          credentials: {
-            username: editConfig.username,
-            password: editConfig.password,
-          },
-        }),
+        body: JSON.stringify({ sourceId: 'miapi', credentials }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        setLoginMessage('登录成功')
+        setLoginMessage(loginMode === 'token' ? 'Token 导入成功' : '登录成功')
         await loadData()
       } else {
-        setLoginMessage(`登录失败: ${data.error}`)
+        setLoginMessage(`操作失败: ${data.error}`)
       }
     } catch (error: any) {
-      setLoginMessage(`登录失败: ${error.message}`)
+      setLoginMessage(`操作失败: ${error.message}`)
     } finally {
       setLogging(false)
     }
@@ -278,43 +293,195 @@ export default function SyncSettings() {
               </span>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 mb-4">
-              请先登录并保存配置
-            </p>
+            <>
+              {/* 登录模式切换 */}
+              <div className="mb-4">
+                <div className="flex border-b border-gray-200">
+                  <button
+                    onClick={() => setLoginMode('password')}
+                    className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
+                      loginMode === 'password'
+                        ? 'border-emerald-600 text-emerald-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    密码登录
+                  </button>
+                  <button
+                    onClick={() => setLoginMode('token')}
+                    className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
+                      loginMode === 'token'
+                        ? 'border-emerald-600 text-emerald-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    手动导入 Token
+                  </button>
+                </div>
+              </div>
+
+              {loginMode === 'password' ? (
+                /* 密码登录字段 */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  {currentSource.configSchema
+                    .filter(f => f.key !== 'cron')
+                    .map(field => (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {field.label}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                        <input
+                          type={field.type === 'password' ? 'password' : 'text'}
+                          value={editConfig[field.key] || field.defaultValue || ''}
+                          onChange={(e) =>
+                            setEditConfig(prev => ({ ...prev, [field.key]: e.target.value }))
+                          }
+                          placeholder={field.placeholder}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        />
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                /* 手动导入 Token 字段 */
+                <div className="mb-4">
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-3">
+                    如果密码登录被风控拦截，可在本地使用{' '}
+                    <code className="bg-amber-100 px-1 rounded">curl</code> 或{' '}
+                    <code className="bg-amber-100 px-1 rounded">python</code> 脚本获取 Token 后粘贴到此处。
+                    参考 miapi.md 中的 cURL 示例。
+                  </p>
+                  <div className="space-y-3">
+                    {/* 必填字段 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          serviceToken <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={manualToken.service_token}
+                          onChange={(e) =>
+                            setManualToken(prev => ({ ...prev, service_token: e.target.value }))
+                          }
+                          placeholder="SERVICE_TOKEN"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          cUserId <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={manualToken.c_user_id}
+                          onChange={(e) =>
+                            setManualToken(prev => ({ ...prev, c_user_id: e.target.value }))
+                          }
+                          placeholder="CUSER_ID"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                    {/* 可选字段（折叠） */}
+                    <details className="group">
+                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 select-none">
+                        可选字段（填入后支持 Token 自动刷新）
+                        <span className="ml-1 inline-block transition-transform group-open:rotate-90">▶</span>
+                      </summary>
+                      <div className="mt-2 pt-2 border-t border-gray-100 space-y-3">
+                        <p className="text-xs text-gray-400">
+                          填入 passToken 和 userId 后，serviceToken 过期时系统会自动刷新，无需重新导入。
+                          这些值都可以从 cURL 脚本输出中获取。
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              passToken
+                            </label>
+                            <input
+                              type="text"
+                              value={manualToken.pass_token}
+                              onChange={(e) =>
+                                setManualToken(prev => ({ ...prev, pass_token: e.target.value }))
+                              }
+                              placeholder="PASS_TOKEN"
+                              className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              userId
+                            </label>
+                            <input
+                              type="text"
+                              value={manualToken.user_id}
+                              onChange={(e) =>
+                                setManualToken(prev => ({ ...prev, user_id: e.target.value }))
+                              }
+                              placeholder="USER_ID"
+                              className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              deviceId
+                            </label>
+                            <input
+                              type="text"
+                              value={manualToken.device_id}
+                              onChange={(e) =>
+                                setManualToken(prev => ({ ...prev, device_id: e.target.value }))
+                              }
+                              placeholder="DEVICE_ID"
+                              className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              )}
+
+              {/* 登录/导入按钮 */}
+              <div className="flex items-center gap-3 mb-4">
+                <button
+                  onClick={handleLogin}
+                  disabled={logging}
+                  className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {logging
+                    ? (loginMode === 'token' ? '导入中...' : '登录中...')
+                    : (loginMode === 'token' ? '导入 Token' : '登录')}
+                </button>
+              </div>
+            </>
           )}
 
-          {/* 配置字段 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {currentSource.configSchema.map(field => (
-              <div key={field.key}>
+          {/* cron 配置 */}
+          <div className="border-t border-gray-100 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                  同步频率 (cron)
                 </label>
                 <input
-                  type={field.type === 'password' ? 'password' : 'text'}
-                  value={editConfig[field.key] || field.defaultValue || ''}
+                  type="text"
+                  value={editConfig.cron || '0 9 * * *'}
                   onChange={(e) =>
-                    setEditConfig(prev => ({ ...prev, [field.key]: e.target.value }))
+                    setEditConfig(prev => ({ ...prev, cron: e.target.value }))
                   }
-                  placeholder={field.placeholder}
+                  placeholder="0 9 * * *"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* 登录 + 保存按钮 */}
-          <div className="mt-4 flex items-center gap-3">
-            {!currentSourceConfig?.hasToken && (
-              <button
-                onClick={handleLogin}
-                disabled={logging}
-                className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {logging ? '登录中...' : '登录'}
-              </button>
-            )}
+          {/* 保存按钮 + 最后同步时间 */}
+          <div className="mt-4 flex items-center justify-between">
             <button
               onClick={handleSaveConfig}
               className="px-3 py-1.5 text-sm font-medium rounded-md text-emerald-600 border border-emerald-600 hover:bg-emerald-50"
@@ -322,7 +489,7 @@ export default function SyncSettings() {
               保存配置
             </button>
             {currentSourceConfig?.lastSyncAt && (
-              <span className="text-xs text-gray-400 ml-auto">
+              <span className="text-xs text-gray-400">
                 最后同步: {new Date(currentSourceConfig.lastSyncAt).toLocaleString()}
               </span>
             )}

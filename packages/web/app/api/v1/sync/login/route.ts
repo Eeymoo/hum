@@ -6,9 +6,13 @@ import { syncRegistry, registerBuiltinSources } from '@/lib/sync/registry'
 /**
  * POST /api/v1/sync/login
  *
- * 密码登录（miapi）：
- *   POST { sourceId?, credentials: { username, password } } → 登录并保存 Token
- *   Response: { success: true } 或 { error: "...", step: "retry" }
+ * 两种认证模式：
+ * 1. 密码登录：{ sourceId?, credentials: { username, password } }
+ * 2. 手动导入 Token：{ sourceId?, credentials: {
+ *      service_token, c_user_id,            // 必填
+ *      pass_token?, user_id?, device_id?    // 可选，有 pass_token 时支持自动刷新
+ *    }}
+ * Response: { success: true } 或 { error: "...", step: "retry" }
  */
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -20,9 +24,20 @@ export async function POST(req: NextRequest) {
   const sourceId = body.sourceId || 'miapi'
   const { credentials } = body
 
-  if (!credentials || typeof credentials !== 'object' || !credentials.username || !credentials.password) {
+  if (!credentials || typeof credentials !== 'object') {
     return NextResponse.json(
-      { error: 'credentials (username, password) is required' },
+      { error: 'credentials is required' },
+      { status: 400 },
+    )
+  }
+
+  // 校验凭据：密码模式或手动 Token 模式
+  const hasPassword = credentials.username && credentials.password
+  const hasManualToken = credentials.service_token && credentials.c_user_id
+
+  if (!hasPassword && !hasManualToken) {
+    return NextResponse.json(
+      { error: '请提供 (username, password) 或 (service_token, c_user_id)' },
       { status: 400 },
     )
   }
@@ -70,7 +85,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, message: '登录成功，Token 已保存' })
+    return NextResponse.json({ success: true, message: 'Token 已保存' })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message, step: 'retry' },
