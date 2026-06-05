@@ -53,7 +53,7 @@ interface SyncJob {
   createdAt: string
 }
 
-type LoginMode = 'password' | 'token'
+type LoginMode = 'password' | 'qrcode' | 'token'
 
 export default function SyncSettings() {
   const [userConfig, setUserConfig] = useState<UserSyncConfig>({
@@ -69,7 +69,7 @@ export default function SyncSettings() {
   const [logging, setLogging] = useState(false)
   const [loginMessage, setLoginMessage] = useState('')
   const [editConfig, setEditConfig] = useState<Record<string, string>>({})
-  const [loginMode, setLoginMode] = useState<LoginMode>('password')
+  const [loginMode, setLoginMode] = useState<LoginMode>('qrcode')
   const [manualToken, setManualToken] = useState({
     service_token: '',
     c_user_id: '',
@@ -77,6 +77,12 @@ export default function SyncSettings() {
     user_id: '',
     device_id: '',
   })
+
+  // QR code login state
+  const [qrImageUrl, setQrImageUrl] = useState('')
+  const [qrSessionId, setQrSessionId] = useState('')
+  const [qrStatus, setQrStatus] = useState<'idle' | 'loading' | 'waiting' | 'scanned' | 'expired' | 'error'>('idle')
+  const [qrError, setQrError] = useState('')
 
   const loadData = useCallback(async () => {
     try {
@@ -202,6 +208,68 @@ export default function SyncSettings() {
     }
   }
 
+  // QR code login handlers
+  const handleQrInit = async () => {
+    setQrStatus('loading')
+    setQrError('')
+    setQrImageUrl('')
+    setLoginMessage('')
+    try {
+      const res = await fetch('/api/v1/sync/login/qr', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setQrStatus('error')
+        setQrError(data.error || '获取二维码失败')
+        return
+      }
+      setQrImageUrl(data.qrImageUrl)
+      setQrSessionId(data.sessionId)
+      setQrStatus('waiting')
+    } catch (error: any) {
+      setQrStatus('error')
+      setQrError(error.message)
+    }
+  }
+
+  const handleQrPoll = useCallback(async () => {
+    if (!qrSessionId || qrStatus !== 'waiting') return
+
+    try {
+      const res = await fetch('/api/v1/sync/login/qr-poll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: qrSessionId }),
+      })
+      const data = await res.json()
+
+      if (data.status === 'scanned') {
+        setQrStatus('scanned')
+        setLoginMessage('二维码登录成功')
+        await loadData()
+      } else if (data.status === 'expired') {
+        setQrStatus('expired')
+        setQrError('二维码已过期，请重新获取')
+      } else if (data.status === 'error') {
+        setQrStatus('error')
+        setQrError(data.error || '扫码失败')
+      }
+      // 'waiting' → 继续轮询
+    } catch {
+      // 网络错误，继续轮询
+    }
+  }, [qrSessionId, qrStatus, loadData])
+
+  // QR poll interval
+  useEffect(() => {
+    if (qrStatus !== 'waiting' || !qrSessionId) return
+
+    // 首次立即 poll（启动后台长轮询）
+    handleQrPoll()
+
+    const timer = setInterval(handleQrPoll, 3000)
+    return () => clearInterval(timer)
+  }, [qrStatus, qrSessionId, handleQrPoll])
+
   const handleTriggerSync = async () => {
     setSyncing(true)
     try {
@@ -298,6 +366,16 @@ export default function SyncSettings() {
               <div className="mb-4">
                 <div className="flex border-b border-gray-200">
                   <button
+                    onClick={() => setLoginMode('qrcode')}
+                    className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
+                      loginMode === 'qrcode'
+                        ? 'border-emerald-600 text-emerald-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    二维码登录
+                  </button>
+                  <button
                     onClick={() => setLoginMode('password')}
                     className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
                       loginMode === 'password'
@@ -320,7 +398,77 @@ export default function SyncSettings() {
                 </div>
               </div>
 
-              {loginMode === 'password' ? (
+              {loginMode === 'qrcode' ? (
+                /* 二维码登录 */
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-3">
+                    使用小米运动 App 或微信扫描二维码登录，无需输入密码。
+                  </p>
+
+                  {qrStatus === 'idle' && (
+                    <button
+                      onClick={handleQrInit}
+                      className="w-full py-3 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      获取二维码
+                    </button>
+                  )}
+
+                  {qrStatus === 'loading' && (
+                    <div className="flex flex-col items-center py-6">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+                      <p className="mt-3 text-sm text-gray-500">正在获取二维码...</p>
+                    </div>
+                  )}
+
+                  {qrStatus === 'waiting' && qrImageUrl && (
+                    <div className="flex flex-col items-center">
+                      <div className="border-2 border-gray-200 rounded-lg p-2 bg-white">
+                        <img
+                          src={qrImageUrl}
+                          alt="小米账号登录二维码"
+                          className="w-48 h-48"
+                        />
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600" />
+                        等待扫码中...
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">请使用小米运动 App 扫描上方二维码</p>
+                    </div>
+                  )}
+
+                  {qrStatus === 'scanned' && (
+                    <div className="flex flex-col items-center py-4">
+                      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
+                        <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="mt-2 text-sm text-emerald-600 font-medium">登录成功</p>
+                    </div>
+                  )}
+
+                  {(qrStatus === 'expired' || qrStatus === 'error') && (
+                    <div className="flex flex-col items-center py-4">
+                      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                        <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <p className="mt-2 text-sm text-red-600">
+                        {qrError || '发生错误'}
+                      </p>
+                      <button
+                        onClick={handleQrInit}
+                        className="mt-3 px-4 py-1.5 text-sm font-medium rounded-md text-emerald-600 border border-emerald-600 hover:bg-emerald-50"
+                      >
+                        重新获取二维码
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : loginMode === 'password' ? (
                 /* 密码登录字段 */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   {currentSource.configSchema
@@ -445,18 +593,20 @@ export default function SyncSettings() {
                 </div>
               )}
 
-              {/* 登录/导入按钮 */}
-              <div className="flex items-center gap-3 mb-4">
-                <button
-                  onClick={handleLogin}
-                  disabled={logging}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {logging
-                    ? (loginMode === 'token' ? '导入中...' : '登录中...')
-                    : (loginMode === 'token' ? '导入 Token' : '登录')}
+              {/* 登录/导入按钮（二维码模式不需要） */}
+              {loginMode !== 'qrcode' && (
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    onClick={handleLogin}
+                    disabled={logging}
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {logging
+                      ? (loginMode === 'token' ? '导入中...' : '登录中...')
+                      : (loginMode === 'token' ? '导入 Token' : '登录')}
                 </button>
               </div>
+              )}
             </>
           )}
 

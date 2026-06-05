@@ -2,9 +2,10 @@ import crypto from 'crypto'
 import type { AuthToken, SyncSource, SyncOptions, SyncResult, SyncError, ConfigField } from '../types'
 
 // ============================================================
-// MiApiSource - 小米运动健康 API 数据源（密码登录 + 直接 API）
+// MiApiSource - 小米运动健康 API 数据源（密码登录 + 二维码登录 + 直接 API）
 //
-// 基于 miapi.md：直接调用小米健康 API，密码登录 + Cookie 认证（无加密）
+// 基于 miband-bot-api-analysis.md：直接调用小米健康 API
+// 支持三种登录方式：密码登录、二维码扫码登录、手动导入 Token
 // - Base URL：https://hlth.io.mi.com （国内）
 // ============================================================
 
@@ -273,6 +274,113 @@ async function loginByPassword(username: string, password: string): Promise<MiAp
   return step3GetServiceToken(login.userId, login.passToken, deviceId)
 }
 
+// ── 二维码扫码登录流程 ─────────────────────────────────────
+
+/**
+ * QR Step 1: 获取二维码信息
+ * 源码: auth/qr.py — loginQr()
+ *
+ * GET https://account.xiaomi.com/longPolling/loginUrl
+ * 返回: { qr: 二维码图片URL, loginUrl: 登录链接, lp: 长轮询URL }
+ */
+export async function getQrCode(): Promise<{ qrImageUrl: string; loginUrl: string; longPollingUrl: string }> {
+  const params = new URLSearchParams({
+    _qrsize: '480',
+    qs: '%3Fsid%3Dmiothealth%26_json%3Dtrue',
+    callback: 'https://sts-hlth.io.mi.com/healthapp/sts',
+    _hasLogo: 'false',
+    sid: SID,
+    serviceParam: '',
+    _locale: 'zh_CN',
+    _dc: String(Date.now()),
+  })
+
+  const resp = await fetch(`${ACCOUNT_BASE}/longPolling/loginUrl?${params}`, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  })
+
+  const text = await resp.text()
+  const data = parseMiResponse(text)
+
+  if (!data.qr || !data.lp) {
+    throw new Error(`获取二维码失败: qr=${!!data.qr} lp=${!!data.lp}`)
+  }
+
+  return {
+    qrImageUrl: data.qr,
+    loginUrl: data.loginUrl,
+    longPollingUrl: data.lp,
+  }
+}
+
+/**
+ * QR Step 2: 长轮询等待扫码 + 提取凭证 + 获取 serviceToken
+ * 源码: auth/qr.py — loginQr() + extractCredentials()
+ *
+ * 流程:
+ * 1. 长轮询等待扫码（最长 180 秒）
+ * 2. 从响应中提取 {ssecurity, userId, passToken, cUserId, location, nonce}
+ * 3. 用 clientSign 跟随 location 获取 serviceToken
+ */
+export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken> {
+  // Step 2a: 长轮询等待扫码
+  const resp = await fetch(longPollingUrl, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(180_000), // 3 分钟超时
+  })
+
+  const text = await resp.text()
+  const data = parseMiResponse(text)
+
+  if (data.code !== 0 && data.result !== 0) {
+    throw new Error(`扫码结果异常: code=${data.code} desc=${data.desc || data.message || '?'}`)
+  }
+
+  const ssecurity = data.ssecurity || ''
+  const userId = data.userId || ''
+  const passToken = data.passToken || ''
+  const cUserId = data.cUserId || ''
+  const location = data.location || ''
+  const nonce = data.nonce || 0
+
+  if (!location || location === 'null') {
+    throw new Error('扫码响应缺少 location 字段')
+  }
+  if (!ssecurity) {
+    throw new Error('扫码响应缺少 ssecurity')
+  }
+
+  // Step 2b: 用 clientSign 跟随 location 获取 serviceToken
+  const clientSign = computeClientSign(nonce, ssecurity)
+  const stsUrl = new URL(location)
+  stsUrl.searchParams.set('clientSign', clientSign)
+  stsUrl.searchParams.set('_userIdNeedEncrypt', 'true')
+
+  const respSts = await fetch(stsUrl.toString(), {
+    headers: { 'User-Agent': USER_AGENT },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  })
+
+  let serviceToken = (respSts.headers.get(`${SID}_serviceToken`) || '').trim()
+  if (!serviceToken) {
+    serviceToken = (respSts.headers.get('serviceToken') || '').trim()
+  }
+  if (!serviceToken) {
+    throw new Error('STS 响应 Header 缺少 serviceToken')
+  }
+
+  return {
+    user_id: userId,
+    c_user_id: cUserId,
+    service_token: serviceToken,
+    ssecurity,
+    pass_token: passToken,
+    device_id: generateDeviceId(),
+  }
+}
+
 /**
  * 使用 passToken 刷新 serviceToken（Token 过期后调用）
  * 源码: VerifyToken → mTokenManager.getServiceToken(sid, true, loginPolicy)
@@ -284,12 +392,13 @@ async function refreshServiceToken(token: MiApiToken): Promise<MiApiToken> {
 // ── 数据源实现 ────────────────────────────────────────────
 
 /**
- * MiApiSource - 小米运动健康 API 数据源（密码登录）
+ * MiApiSource - 小米运动健康 API 数据源
  *
- * 基于 miapi.md 方案 B：直接调用小米健康 API
+ * 基于 miband-bot-api-analysis.md 方案 B：直接调用小米健康 API
  *
  * 支持功能：
  * - 密码登录（三步认证流程）
+ * - 二维码扫码登录（通过 /api/v1/sync/login/qr 端点）
  * - 同步步数、心率、睡眠、体重数据
  * - 按 date + sourceId 唯一约束去重，保证幂等性
  * - Token 过期自动刷新（passToken → serviceToken）
@@ -297,7 +406,7 @@ async function refreshServiceToken(token: MiApiToken): Promise<MiApiToken> {
 export class MiApiSource implements SyncSource {
   id = 'miapi'
   name = '小米健康 API'
-  description = '通过小米健康 API（密码登录）同步步数、心率、睡眠、体重等健康数据'
+  description = '通过小米健康 API 同步步数、心率、睡眠、体重等健康数据（支持二维码/密码登录）'
 
   configSchema: ConfigField[] = [
     {
