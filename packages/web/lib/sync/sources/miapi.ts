@@ -334,6 +334,7 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   const data = parseMiResponse(text)
 
   if (data.code !== 0 && data.result !== 0) {
+    console.error('[QR] 扫码响应异常, raw:', text.slice(0, 500))
     throw new Error(`扫码结果异常: code=${data.code} desc=${data.desc || data.message || '?'}`)
   }
 
@@ -344,10 +345,14 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   const location = data.location || ''
   const nonce = data.nonce || 0
 
+  console.log('[QR] 扫码成功, userId:', userId, 'nonce:', nonce, 'location:', location ? '有' : '无', 'ssecurity:', ssecurity ? '有' : '无')
+
   if (!location || location === 'null') {
+    console.error('[QR] 扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
     throw new Error('扫码响应缺少 location 字段')
   }
   if (!ssecurity) {
+    console.error('[QR] 扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
     throw new Error('扫码响应缺少 ssecurity')
   }
 
@@ -357,17 +362,27 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   stsUrl.searchParams.set('clientSign', clientSign)
   stsUrl.searchParams.set('_userIdNeedEncrypt', 'true')
 
+  console.log('[QR] STS 请求:', stsUrl.toString().slice(0, 200))
+
   const respSts = await fetch(stsUrl.toString(), {
     headers: { 'User-Agent': USER_AGENT },
     redirect: 'manual',
     signal: AbortSignal.timeout(TIMEOUT_MS),
   })
 
+  // 调试：打印所有响应头
+  const respHeaders: Record<string, string> = {}
+  respSts.headers.forEach((v, k) => { respHeaders[k] = v })
+  console.log('[QR] STS 响应 status:', respSts.status, 'headers:', JSON.stringify(respHeaders))
+
   let serviceToken = (respSts.headers.get(`${SID}_serviceToken`) || '').trim()
   if (!serviceToken) {
     serviceToken = (respSts.headers.get('serviceToken') || '').trim()
   }
   if (!serviceToken) {
+    // 尝试从响应体中获取
+    const stsBody = await respSts.text()
+    console.error('[QR] STS 响应体:', stsBody.slice(0, 500))
     throw new Error('STS 响应 Header 缺少 serviceToken')
   }
 
