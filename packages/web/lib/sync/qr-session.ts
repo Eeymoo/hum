@@ -29,8 +29,12 @@ export interface QrSession {
 // 全局会话存储
 const sessions = new Map<string, QrSession>()
 
-// 清理超过 5 分钟的会话
-const SESSION_TTL = 5 * 60 * 1000
+// 会话 TTL：10 分钟（小米二维码有效期 5 分钟 + 长轮询/处理余量）
+const SESSION_TTL = 10 * 60 * 1000
+
+function isExpired(session: QrSession): boolean {
+  return Date.now() - session.createdAt > SESSION_TTL
+}
 
 function cleanup() {
   const now = Date.now()
@@ -38,6 +42,14 @@ function cleanup() {
     if (now - session.createdAt > SESSION_TTL) {
       sessions.delete(id)
     }
+  }
+}
+
+// 定期清理过期会话（每 2 分钟），避免长期不再 createSession 时内存泄漏
+if (typeof setInterval !== 'undefined') {
+  const timer = setInterval(cleanup, 2 * 60 * 1000)
+  if (typeof timer === 'object' && 'unref' in timer) {
+    ;(timer as NodeJS.Timeout).unref()
   }
 }
 
@@ -53,7 +65,14 @@ export function createSession(sessionId: string, lpUrl: string): QrSession {
 }
 
 export function getSession(sessionId: string): QrSession | undefined {
-  return sessions.get(sessionId)
+  const session = sessions.get(sessionId)
+  if (!session) return undefined
+  // 读取时检查过期：过期则删除并返回 undefined
+  if (isExpired(session)) {
+    sessions.delete(sessionId)
+    return undefined
+  }
+  return session
 }
 
 export function updateSession(sessionId: string, update: Partial<QrSession>): void {

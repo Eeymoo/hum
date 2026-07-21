@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import type { AuthToken, SyncSource, SyncOptions, SyncResult, SyncError, ConfigField } from '../types'
+import { buildEncryptedParams, decryptResponse } from '../mi-crypto'
 
 // ============================================================
 // MiApiSource - 小米运动健康 API 数据源（密码登录 + 二维码登录 + 直接 API）
@@ -14,6 +15,15 @@ const HEALTH_BASE = 'https://hlth.io.mi.com'
 const USER_AGENT = 'PassportSDK/5.3.0.release.79 XiaomiAccountSSO/5.3.0.release.79'
 const SID = 'miothealth'
 const TIMEOUT_MS = 15_000
+
+// 调试日志开关：默认静默，SYNC_DEBUG=true 时输出截断的请求/响应用于联调
+const SYNC_DEBUG = process.env.SYNC_DEBUG === 'true'
+function syncDebug(...args: unknown[]): void {
+  if (SYNC_DEBUG) console.log('[MiApi]', ...args)
+}
+function syncDebugError(...args: unknown[]): void {
+  if (SYNC_DEBUG) console.error('[MiApi]', ...args)
+}
 
 /** 小米 API 认证 Token 结构 */
 interface MiApiToken {
@@ -40,6 +50,7 @@ function parseMiResponse(raw: string): any {
     return {}
   }
 }
+export { parseMiResponse }
 
 /**
  * 生成设备指纹
@@ -67,21 +78,38 @@ function computeClientSign(nonce: number | string, ssecurity: string): string {
   const msg = `nonce=${nonce}&${ssecurity}`
   return crypto.createHash('sha1').update(msg, 'utf-8').digest('base64')
 }
+export { hashPassword, computeClientSign }
 
 /**
- * 发送健康 API GET 请求
- * 源码: FitnessApiService — @aib=@GET, @zkj=@Query
- * 参数通过 data=<URL-encoded JSON> 传递
+ * 发送健康 API GET 请求（RC4 加密签名版）
+ *
+ * 小米健康数据 API 要求所有请求参数经 RC4 加密 + SHA1 签名，
+ * 响应体同样 RC4 加密需解密。明文调用会返回 401 auth err。
+ *
+ * 流程：
+ * 1. buildEncryptedParams 生成加密参数（含 signature/_nonce/rc4_hash__）
+ * 2. 通过 Cookie (cUserId + serviceToken) 发送
+ * 3. 响应经 decryptResponse 解密为 JSON
  */
-async function healthApiGet(
+async function encryptedHealthGet(
   token: MiApiToken,
   endpoint: string,
   params?: Record<string, any>,
 ): Promise<any> {
-  const url = new URL(`/app/v1/${endpoint}`, HEALTH_BASE)
-  if (params) {
-    url.searchParams.set('data', JSON.stringify(params))
+  if (!token.ssecurity) {
+    throw new Error('凭证缺少 ssecurity，无法生成加密签名（请重新登录）')
   }
+
+  const urlPath = `/app/v1/${endpoint}`
+  const enc = buildEncryptedParams('GET', urlPath, token.ssecurity, params)
+
+  const url = new URL(urlPath, HEALTH_BASE)
+  // 加密参数作为 query string
+  for (const [k, v] of Object.entries(enc)) {
+    url.searchParams.set(k, v)
+  }
+
+  syncDebug('加密请求', endpoint, 'nonce?', !!enc._nonce, 'signature?', !!enc.signature)
 
   const resp = await fetch(url.toString(), {
     method: 'GET',
@@ -97,10 +125,95 @@ async function healthApiGet(
   }
 
   const text = await resp.text()
-  return parseMiResponse(text)
+  // 响应解密（可能带 &&&START&&& 前缀，decryptResponse 内部处理）
+  try {
+    const decrypted = decryptResponse(token.ssecurity, enc._nonce, text)
+    return decrypted
+  } catch (e) {
+    // 解密失败时 fallback 尝试明文 JSON（个别端点可能不加密）
+    syncDebug('响应解密失败，尝试明文解析:', (e as Error).message)
+    const plain = parseMiResponse(text)
+    // 检查是否是明文错误响应
+    if (plain && typeof plain === 'object' && 'code' in plain) {
+      return plain
+    }
+    throw new Error(`响应解密失败: ${(e as Error).message}`)
+  }
+}
+
+/**
+ * 从小米响应原始文本提取 nonce 的字符串原值
+ * 关键：nonce 是大整数（>2^53），JSON.parse 会丢精度导致 clientSign 算错
+ * 必须用正则从原始文本提取字符串原值
+ */
+export function extractNonce(rawText: string): string {
+  const m = rawText.match(/"nonce"\s*:\s*(\d+)/)
+  return m ? m[1] : ''
 }
 
 // ── 认证流程 ──────────────────────────────────────────────
+
+/**
+ * 按天聚合数据查询（小米健康真实数据接口）
+ *
+ * 端点: /app/v1/data/get_aggregated_fitness_data_by_time
+ * 参数: relative_uid(0=自己), key(小写: steps/sleep/heart_rate/weight/...), tag=daily_report, start_time/end_time(秒), limit
+ * 返回: result.data_list[{sid,tag,key,time,value(JSON字符串),...}]
+ */
+async function getAggregatedData(
+  token: MiApiToken,
+  key: string,
+  startTimeSec: number,
+  endTimeSec: number,
+  limit = 100,
+): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
+  const resp = await encryptedHealthGet(token, 'data/get_aggregated_fitness_data_by_time', {
+    relative_uid: 0,
+    key,
+    tag: 'daily_report',
+    start_time: startTimeSec,
+    end_time: endTimeSec,
+    limit,
+  })
+  const list = resp?.result?.data_list
+  return Array.isArray(list) ? list : []
+}
+
+/** 解析聚合数据的 value 字段（JSON 字符串） */
+export function parseAggValue(value: unknown): Record<string, any> {
+  if (typeof value !== 'string') return {}
+  try {
+    return JSON.parse(value)
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * 原始测量数据查询（单次测量记录，如体重/血压）
+ *
+ * 端点: /app/v1/data/get_fitness_data_by_time
+ * 参数: relative_uid(0=自己), key(weight/blood_pressure), start_time/end_time(秒), limit
+ * 返回: result.data_list[{sid,key,time,value(JSON字符串),zone_offset,...}]
+ */
+async function getFitnessData(
+  token: MiApiToken,
+  key: string,
+  startTimeSec: number,
+  endTimeSec: number,
+  limit = 100,
+): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
+  const resp = await encryptedHealthGet(token, 'data/get_fitness_data_by_time', {
+    relative_uid: 0,
+    key,
+    start_time: startTimeSec,
+    end_time: endTimeSec,
+    limit,
+  })
+  const list = resp?.result?.data_list
+  return Array.isArray(list) ? list : []
+}
+
 
 /**
  * Step 1: 预登录 — 获取 MetaLoginData (sign/qs/callback)
@@ -122,7 +235,8 @@ async function step1PreLogin(deviceId: string): Promise<{ sign: string; qs: stri
   const text = await resp.text()
   const body = parseMiResponse(text)
 
-  const sign = body.sign || ''
+  // 小米 _json 模式下字段名带下划线前缀（_sign），兼容两种形态
+  const sign = body.sign || body._sign || ''
   if (!sign) {
     throw new Error('Step 1: 未返回 sign 字段，可能被风控拦截或账号状态异常')
   }
@@ -216,7 +330,8 @@ async function step3GetServiceToken(
   const bodyA = parseMiResponse(textA)
 
   const location = bodyA.location || ''
-  const nonce = bodyA.nonce || 0
+  // nonce 大整数需从原始文本提取字符串，避免 JSON 精度丢失
+  const nonce = extractNonce(textA) || String(bodyA.nonce || 0)
   const ssecurity = bodyA.ssecurity || ''
   const cUserId = (respA.headers.get('cUserId') || bodyA.cUserId || '').trim()
 
@@ -334,7 +449,7 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   const data = parseMiResponse(text)
 
   if (data.code !== 0 && data.result !== 0) {
-    console.error('[QR] 扫码响应异常, raw:', text.slice(0, 500))
+    syncDebugError('扫码响应异常, raw:', text.slice(0, 500))
     throw new Error(`扫码结果异常: code=${data.code} desc=${data.desc || data.message || '?'}`)
   }
 
@@ -343,16 +458,18 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   const passToken = data.passToken || ''
   const cUserId = data.cUserId || ''
   const location = data.location || ''
-  const nonce = data.nonce || 0
+  // ⚠ nonce 是大整数（>2^53），JSON.parse 会丢精度 → clientSign 算错 → STS 400
+  // 必须从原始文本提取 nonce 的字符串原值
+  const nonce = extractNonce(text) || String(data.nonce || 0)
 
-  console.log('[QR] 扫码成功, userId:', userId, 'nonce:', nonce, 'location:', location ? '有' : '无', 'ssecurity:', ssecurity ? '有' : '无')
+  syncDebug('扫码成功, userId:', userId, 'nonce:', nonce, 'location:', location ? '有' : '无', 'ssecurity:', ssecurity ? '有' : '无')
 
   if (!location || location === 'null') {
-    console.error('[QR] 扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
+    syncDebugError('扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
     throw new Error('扫码响应缺少 location 字段')
   }
   if (!ssecurity) {
-    console.error('[QR] 扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
+    syncDebugError('扫码响应完整数据:', JSON.stringify(data).slice(0, 1000))
     throw new Error('扫码响应缺少 ssecurity')
   }
 
@@ -362,28 +479,31 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   stsUrl.searchParams.set('clientSign', clientSign)
   stsUrl.searchParams.set('_userIdNeedEncrypt', 'true')
 
-  console.log('[QR] STS 请求:', stsUrl.toString().slice(0, 200))
+  syncDebug('STS 请求:', stsUrl.toString().slice(0, 200))
 
+  // 跟随重定向（文档：跟随 location 重定向获取 serviceToken）
   const respSts = await fetch(stsUrl.toString(), {
     headers: { 'User-Agent': USER_AGENT },
-    redirect: 'manual',
     signal: AbortSignal.timeout(TIMEOUT_MS),
   })
 
-  // 调试：打印所有响应头
-  const respHeaders: Record<string, string> = {}
-  respSts.headers.forEach((v, k) => { respHeaders[k] = v })
-  console.log('[QR] STS 响应 status:', respSts.status, 'headers:', JSON.stringify(respHeaders))
-
+  // serviceToken 可能在 header 或 set-cookie 中
   let serviceToken = (respSts.headers.get(`${SID}_serviceToken`) || '').trim()
   if (!serviceToken) {
     serviceToken = (respSts.headers.get('serviceToken') || '').trim()
   }
   if (!serviceToken) {
-    // 尝试从响应体中获取
+    // 尝试从 set-cookie 提取
+    const setCookie = respSts.headers.get('set-cookie') || ''
+    const m = setCookie.match(/serviceToken=([^;]+)/)
+    if (m) serviceToken = m[1]
+  }
+  if (!serviceToken) {
+    const respHeaders: Record<string, string> = {}
+    respSts.headers.forEach((v, k) => { respHeaders[k] = v })
     const stsBody = await respSts.text()
-    console.error('[QR] STS 响应体:', stsBody.slice(0, 500))
-    throw new Error('STS 响应 Header 缺少 serviceToken')
+    syncDebugError('STS 响应体:', stsBody.slice(0, 500), 'headers:', JSON.stringify(respHeaders))
+    throw new Error('STS 响应缺少 serviceToken')
   }
 
   return {
@@ -502,13 +622,21 @@ export class MiApiSource implements SyncSource {
    * 同步健康数据
    *
    * 同步的数据类型：
-   * - 步数 → exercise 表
-   * - 心率 → exercise 表（额外数据）
-   * - 睡眠 → sleep 表
-   * - 体重 → weight 表
+   * - 步数 steps → exercise 表（聚合接口）
+   * - 心率 heart_rate → exercise 表（聚合接口）
+   * - 睡眠 sleep → sleep 表（聚合接口）
+   * - 卡路里 calories → exercise 表（聚合接口）
+   * - 血氧 spo2 → exercise 表（聚合接口）
+   * - 有效站立 valid_stand → exercise 表（聚合接口）
+   * - 中高强度 intensity → exercise 表（聚合接口）
+   * - 压力 stress → exercise 表（聚合接口）
+   * - 体重 weight → weight 表（原始测量接口，含体脂/肌肉/骨量/水分/内脏脂肪）
    *
-   * API 端点:
-   * - GET /app/v1/data/get_project_data_by_time?data=<JSON>
+   * 两个数据接口（均 RC4 加密签名）：
+   * - 聚合（按天）: GET /app/v1/data/get_aggregated_fitness_data_by_time
+   *   参数: relative_uid=0, key(小写), tag=daily_report, start_time/end_time(秒), limit
+   * - 原始测量: GET /app/v1/data/get_fitness_data_by_time
+   *   参数: relative_uid=0, key(weight/blood_pressure), start_time/end_time(秒), limit
    *
    * 使用 Prisma @@unique([date, sourceId]) 约束 + upsert 保证幂等性
    */
@@ -535,13 +663,14 @@ export class MiApiSource implements SyncSource {
     const errors: SyncError[] = []
     const syncedRecords = { exercise: 0, sleep: 0, weight: 0, diet: 0 }
 
-    // 计算时间范围：默认最近 7 天
+    // 计算时间范围：默认最近 7 天（聚合接口用秒级时间戳）
     const endDate = options.endDate || new Date()
     const startDate = options.startDate || new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const startTime = startDate.getTime()
-    const endTime = endDate.getTime()
+    const startTimeSec = Math.floor(startDate.getTime() / 1000)
+    const endTimeSec = Math.floor(endDate.getTime() / 1000)
 
     const { default: prisma } = await import('@/lib/prisma')
+    const { encryptToken, isSyncEncryptionAvailable } = await import('@/lib/sync/crypto')
 
     // 尝试刷新 token 的辅助函数
     let tokenRefreshed = false
@@ -554,109 +683,265 @@ export class MiApiSource implements SyncSource {
           const newToken = await refreshServiceToken(miToken)
           miToken.service_token = newToken.service_token
           miToken.c_user_id = newToken.c_user_id
+          // 刷新后的 token 持久化到数据库，避免下次同步仍用过期 token
+          try {
+            const plain = JSON.stringify(miToken)
+            await prisma.syncSourceConfig.updateMany({
+              where: { userId: options.userId, sourceId: 'miapi' },
+              data: { token: isSyncEncryptionAvailable() ? encryptToken(plain) : plain },
+            })
+          } catch {
+            // 持久化失败不阻断本次同步（内存 token 仍可用）
+          }
           return fn()
         }
         throw e
       }
     }
 
-    // --- 同步步数数据 ---
+    // --- 同步步数数据（get_aggregated_fitness_data_by_time, key=steps）---
     try {
-      const stepsResp = await withRetry(() =>
-        healthApiGet(miToken, 'data/get_project_data_by_time', {
-          startTime,
-          endTime,
-          dataTypes: ['STEPS'],
-        }),
+      const stepsList = await withRetry(() =>
+        getAggregatedData(miToken, 'steps', startTimeSec, endTimeSec),
       )
 
-      const stepsData = stepsResp?.data
-      if (stepsData?.STEPS?.items) {
-        for (const item of stepsData.STEPS.items) {
-          try {
-            const date = new Date(item.startTime || item.time)
-            const dateStr = date.toISOString().split('T')[0]
-            const sourceId = `miapi_steps_${dateStr}`
+      for (const entry of stepsList) {
+        try {
+          const value = parseAggValue(entry.value)
+          const date = new Date((entry.time as number) * 1000)
+          const dateStr = date.toISOString().split('T')[0]
+          const sourceId = `miapi_steps_${dateStr}`
 
-            await prisma.exercise.upsert({
-              where: { date_sourceId: { date: new Date(dateStr), sourceId } },
-              create: {
-                userId,
-                type: 'steps',
-                duration: 0,
-                caloriesBurned: item.calories ? Math.round(item.calories) : null,
-                activities: JSON.stringify({
-                  steps: item.steps || item.value || 0,
-                  distance: item.distance || 0,
-                  goal: item.goal || 0,
-                }),
-                date: new Date(dateStr),
-                sourceId,
-                extraData: JSON.stringify({ raw: item }),
-              },
-              update: {
-                caloriesBurned: item.calories ? Math.round(item.calories) : null,
-                activities: JSON.stringify({
-                  steps: item.steps || item.value || 0,
-                  distance: item.distance || 0,
-                  goal: item.goal || 0,
-                }),
-                extraData: JSON.stringify({ raw: item }),
-              },
-            })
-            syncedRecords.exercise++
-          } catch (e: any) {
-            errors.push({ type: 'exercise', message: e.message })
-          }
+          await prisma.exercise.upsert({
+            where: { date_sourceId: { date: new Date(dateStr), sourceId } },
+            create: {
+              userId,
+              type: 'steps',
+              duration: 0,
+              caloriesBurned: value.calories ? Math.round(value.calories) : null,
+              activities: JSON.stringify({
+                steps: value.steps || 0,
+                distance: value.distance || 0,
+                goal: value.goal || 0,
+              }),
+              date: new Date(dateStr),
+              sourceId,
+              extraData: JSON.stringify({ raw: value }),
+            },
+            update: {
+              caloriesBurned: value.calories ? Math.round(value.calories) : null,
+              activities: JSON.stringify({
+                steps: value.steps || 0,
+                distance: value.distance || 0,
+                goal: value.goal || 0,
+              }),
+              extraData: JSON.stringify({ raw: value }),
+            },
+          })
+          syncedRecords.exercise++
+        } catch (e: any) {
+          errors.push({ type: 'exercise', message: e.message })
         }
       }
     } catch (e: any) {
       errors.push({ type: 'exercise', message: `步数同步失败: ${e.message}` })
     }
 
-    // --- 同步心率数据 ---
+    // --- 同步心率数据（key=heart_rate）---
     try {
-      const hrResp = await withRetry(() =>
-        healthApiGet(miToken, 'data/get_project_data_by_time', {
-          startTime,
-          endTime,
-          dataTypes: ['HEART_RATE'],
-        }),
+      const hrList = await withRetry(() =>
+        getAggregatedData(miToken, 'heart_rate', startTimeSec, endTimeSec),
       )
 
-      const hrData = hrResp?.data
-      if (hrData?.HEART_RATE?.items) {
-        for (const item of hrData.HEART_RATE.items) {
+      for (const entry of hrList) {
+        try {
+          const value = parseAggValue(entry.value)
+          const date = new Date((entry.time as number) * 1000)
+          const dateStr = date.toISOString().split('T')[0]
+          const sourceId = `miapi_hr_${dateStr}`
+
+          await prisma.exercise.upsert({
+            where: { date_sourceId: { date: new Date(dateStr), sourceId } },
+            create: {
+              userId,
+              type: 'heart_rate',
+              duration: 0,
+              caloriesBurned: null,
+              activities: JSON.stringify({
+                avg: value.avg_hr || 0,
+                max: value.max_hr || 0,
+                min: value.min_hr || 0,
+                resting: value.avg_rhr || null,
+              }),
+              date: new Date(dateStr),
+              sourceId,
+              extraData: JSON.stringify({ raw: value }),
+            },
+            update: {
+              activities: JSON.stringify({
+                avg: value.avg_hr || 0,
+                max: value.max_hr || 0,
+                min: value.min_hr || 0,
+                resting: value.avg_rhr || null,
+              }),
+              extraData: JSON.stringify({ raw: value }),
+            },
+          })
+          syncedRecords.exercise++
+        } catch (e: any) {
+          errors.push({ type: 'exercise', message: e.message })
+        }
+      }
+    } catch (e: any) {
+      errors.push({ type: 'exercise', message: `心率同步失败: ${e.message}` })
+    }
+
+    // --- 同步睡眠数据（key=sleep，segment_details 含 bedtime/wake_up_time/sleep_deep_duration）---
+    try {
+      const sleepList = await withRetry(() =>
+        getAggregatedData(miToken, 'sleep', startTimeSec, endTimeSec),
+      )
+
+      for (const entry of sleepList) {
+        try {
+          const value = parseAggValue(entry.value)
+          const date = new Date((entry.time as number) * 1000)
+          const dateStr = date.toISOString().split('T')[0]
+          const sourceId = `miapi_sleep_${dateStr}`
+
+          // 取主睡眠段（通常是最长的那段）
+          const segments: any[] = value.segment_details || []
+          const mainSeg = segments.length > 0
+            ? segments.reduce((a, b) => ((b.duration || 0) > (a.duration || 0) ? b : a))
+            : null
+
+          const bedtimeSec = mainSeg?.bedtime || (entry.time as number)
+          const wakeSec = mainSeg?.wake_up_time || (bedtimeSec + (mainSeg?.duration || 0) * 60)
+          const durationMin = mainSeg?.duration || 0
+          const deepMin = mainSeg?.sleep_deep_duration || 0
+          const remMin = mainSeg?.sleep_rem_duration || 0
+          const awakeCount = mainSeg?.awake_count || 0
+
+          await prisma.sleep.upsert({
+            where: { date_sourceId: { date: new Date(dateStr), sourceId } },
+            create: {
+              userId,
+              duration: durationMin / 60,
+              bedTime: new Date(bedtimeSec * 1000).toISOString(),
+              wakeTime: new Date(wakeSec * 1000).toISOString(),
+              quality: value.sleep_score || 50,
+              deepSleep: deepMin > 0 ? deepMin / 60 : null,
+              remSleep: remMin > 0 ? remMin / 60 : null,
+              awakenings: awakeCount,
+              date: new Date(dateStr),
+              sourceId,
+              extraData: JSON.stringify({ sleepScore: value.sleep_score, raw: value }),
+            },
+            update: {
+              duration: durationMin / 60,
+              quality: value.sleep_score || 50,
+              deepSleep: deepMin > 0 ? deepMin / 60 : null,
+              remSleep: remMin > 0 ? remMin / 60 : null,
+              awakenings: awakeCount,
+            },
+          })
+          syncedRecords.sleep++
+        } catch (e: any) {
+          errors.push({ type: 'sleep', message: e.message })
+        }
+      }
+    } catch (e: any) {
+      errors.push({ type: 'sleep', message: `睡眠同步失败: ${e.message}` })
+    }
+
+    // --- 同步体重数据（get_fitness_data_by_time 原始测量记录，key=weight）---
+    try {
+      const weightList = await withRetry(() =>
+        getFitnessData(miToken, 'weight', startTimeSec, endTimeSec),
+      )
+
+      for (const entry of weightList) {
+        try {
+          const value = parseAggValue(entry.value)
+          // 体重原始记录含丰富字段：weight/bmi/body_fat_rate/muscle_mass/bone_mass/visceral_fat/water 等
+          const weightKg = value.weight
+          if (weightKg == null || weightKg <= 0) continue
+
+          const date = new Date((entry.time as number) * 1000)
+          // 同一天多次测量，sourceId 用精确时间戳区分
+          const sourceId = `miapi_weight_${entry.time}`
+
+          await prisma.weight.upsert({
+            where: { date_sourceId: { date, sourceId } },
+            create: {
+              userId,
+              weight: weightKg,
+              bmi: value.bmi > 0 ? value.bmi : null,
+              bodyFat: value.body_fat_rate > 0 ? value.body_fat_rate : null,
+              muscleMass: value.muscle_mass > 0 ? value.muscle_mass : null,
+              boneMass: value.bone_mass > 0 ? value.bone_mass : null,
+              water: value.body_moisture_mass > 0 ? value.body_moisture_mass : null,
+              visceralFat: value.visceral_fat > 0 ? Math.round(value.visceral_fat) : null,
+              date,
+              sourceId,
+              extraData: JSON.stringify({ raw: value }),
+            },
+            update: {
+              weight: weightKg,
+              bmi: value.bmi > 0 ? value.bmi : null,
+              bodyFat: value.body_fat_rate > 0 ? value.body_fat_rate : null,
+              muscleMass: value.muscle_mass > 0 ? value.muscle_mass : null,
+              boneMass: value.bone_mass > 0 ? value.bone_mass : null,
+              water: value.body_moisture_mass > 0 ? value.body_moisture_mass : null,
+              visceralFat: value.visceral_fat > 0 ? Math.round(value.visceral_fat) : null,
+            },
+          })
+          syncedRecords.weight++
+        } catch (e: any) {
+          errors.push({ type: 'weight', message: e.message })
+        }
+      }
+    } catch (e: any) {
+      errors.push({ type: 'weight', message: `体重同步失败: ${e.message}` })
+    }
+
+    // --- 同步其他聚合类型（calories/spo2/valid_stand/intensity/stress → exercise 表）---
+    const otherAggTypes: Array<{ key: string; sourcePrefix: string; mapType: string }> = [
+      { key: 'calories', sourcePrefix: 'miapi_cal', mapType: 'calories' },
+      { key: 'spo2', sourcePrefix: 'miapi_spo2', mapType: 'spo2' },
+      { key: 'valid_stand', sourcePrefix: 'miapi_stand', mapType: 'valid_stand' },
+      { key: 'intensity', sourcePrefix: 'miapi_intensity', mapType: 'intensity' },
+      { key: 'stress', sourcePrefix: 'miapi_stress', mapType: 'stress' },
+    ]
+    for (const { key, sourcePrefix, mapType } of otherAggTypes) {
+      try {
+        const list = await withRetry(() =>
+          getAggregatedData(miToken, key, startTimeSec, endTimeSec),
+        )
+        for (const entry of list) {
           try {
-            const date = new Date(item.startTime || item.time)
+            const value = parseAggValue(entry.value)
+            const date = new Date((entry.time as number) * 1000)
             const dateStr = date.toISOString().split('T')[0]
-            const sourceId = `miapi_hr_${dateStr}`
+            const sourceId = `${sourcePrefix}_${dateStr}`
 
             await prisma.exercise.upsert({
               where: { date_sourceId: { date: new Date(dateStr), sourceId } },
               create: {
                 userId,
-                type: 'heart_rate',
-                duration: 0,
-                caloriesBurned: null,
-                activities: JSON.stringify({
-                  avg: item.avgHr || item.heartRate || 0,
-                  max: item.maxHr || 0,
-                  min: item.minHr || 0,
-                  resting: item.restingHr || null,
-                }),
+                type: mapType,
+                duration: value.duration || 0,
+                caloriesBurned: value.calories ? Math.round(value.calories) : null,
+                activities: JSON.stringify(value),
                 date: new Date(dateStr),
                 sourceId,
-                extraData: JSON.stringify({ raw: item }),
+                extraData: JSON.stringify({ raw: value }),
               },
               update: {
-                activities: JSON.stringify({
-                  avg: item.avgHr || item.heartRate || 0,
-                  max: item.maxHr || 0,
-                  min: item.minHr || 0,
-                  resting: item.restingHr || null,
-                }),
-                extraData: JSON.stringify({ raw: item }),
+                duration: value.duration || 0,
+                caloriesBurned: value.calories ? Math.round(value.calories) : null,
+                activities: JSON.stringify(value),
+                extraData: JSON.stringify({ raw: value }),
               },
             })
             syncedRecords.exercise++
@@ -664,111 +949,9 @@ export class MiApiSource implements SyncSource {
             errors.push({ type: 'exercise', message: e.message })
           }
         }
+      } catch (e: any) {
+        errors.push({ type: 'exercise', message: `${mapType} 同步失败: ${e.message}` })
       }
-    } catch (e: any) {
-      errors.push({ type: 'exercise', message: `心率同步失败: ${e.message}` })
-    }
-
-    // --- 同步睡眠数据 ---
-    try {
-      const sleepResp = await withRetry(() =>
-        healthApiGet(miToken, 'data/get_project_data_by_time', {
-          startTime,
-          endTime,
-          dataTypes: ['SLEEP'],
-        }),
-      )
-
-      const sleepData = sleepResp?.data
-      if (sleepData?.SLEEP?.items) {
-        for (const item of sleepData.SLEEP.items) {
-          try {
-            const date = new Date(item.startTime || item.time)
-            const dateStr = date.toISOString().split('T')[0]
-            const sourceId = `miapi_sleep_${dateStr}`
-
-            const segments = item.segment_details || item.segments || []
-            const firstBedtime = segments.length > 0 ? segments[0].bedtime : (item.startTime || item.time)
-            const lastWakeTime = segments.length > 0
-              ? segments[segments.length - 1].wake_up_time || segments[segments.length - 1].wakeTime
-              : (item.endTime || item.time + (item.total_duration || 0) * 60)
-
-            await prisma.sleep.upsert({
-              where: { date_sourceId: { date: new Date(dateStr), sourceId } },
-              create: {
-                userId,
-                duration: (item.total_duration || item.duration || 0) / 60,
-                bedTime: new Date((typeof firstBedtime === 'number' ? firstBedtime * 1000 : firstBedtime)).toISOString(),
-                wakeTime: new Date((typeof lastWakeTime === 'number' ? lastWakeTime * 1000 : lastWakeTime)).toISOString(),
-                quality: item.sleep_score || item.score || 50,
-                deepSleep: item.deep_duration ? item.deep_duration / 60 : (item.sleep_deep_duration ? item.sleep_deep_duration / 60 : null),
-                remSleep: item.rem_duration ? item.rem_duration / 60 : (item.sleep_rem_duration ? item.sleep_rem_duration / 60 : null),
-                awakenings: item.awake_duration ? Math.round(item.awake_duration) : null,
-                date: new Date(dateStr),
-                sourceId,
-                extraData: JSON.stringify({
-                  sleepScore: item.sleep_score || item.score,
-                  raw: item,
-                }),
-              },
-              update: {
-                duration: (item.total_duration || item.duration || 0) / 60,
-                quality: item.sleep_score || item.score || 50,
-                deepSleep: item.deep_duration ? item.deep_duration / 60 : (item.sleep_deep_duration ? item.sleep_deep_duration / 60 : null),
-                remSleep: item.rem_duration ? item.rem_duration / 60 : (item.sleep_rem_duration ? item.sleep_rem_duration / 60 : null),
-              },
-            })
-            syncedRecords.sleep++
-          } catch (e: any) {
-            errors.push({ type: 'sleep', message: e.message })
-          }
-        }
-      }
-    } catch (e: any) {
-      errors.push({ type: 'sleep', message: `睡眠同步失败: ${e.message}` })
-    }
-
-    // --- 同步体重数据 ---
-    try {
-      const weightResp = await withRetry(() =>
-        healthApiGet(miToken, 'data/get_project_data_by_time', {
-          startTime,
-          endTime,
-          dataTypes: ['WEIGHT'],
-        }),
-      )
-
-      const weightData = weightResp?.data
-      if (weightData?.WEIGHT?.items) {
-        for (const item of weightData.WEIGHT.items) {
-          try {
-            const date = new Date(item.startTime || item.time)
-            const dateStr = date.toISOString().split('T')[0]
-            const sourceId = `miapi_weight_${dateStr}`
-
-            await prisma.weight.upsert({
-              where: { date_sourceId: { date: new Date(dateStr), sourceId } },
-              create: {
-                userId,
-                weight: item.weight || item.value || 0,
-                bmi: item.bmi || null,
-                date: new Date(dateStr),
-                sourceId,
-                extraData: JSON.stringify({ raw: item }),
-              },
-              update: {
-                weight: item.weight || item.value || 0,
-                bmi: item.bmi || null,
-              },
-            })
-            syncedRecords.weight++
-          } catch (e: any) {
-            errors.push({ type: 'weight', message: e.message })
-          }
-        }
-      }
-    } catch (e: any) {
-      errors.push({ type: 'weight', message: `体重同步失败: ${e.message}` })
     }
 
     return {

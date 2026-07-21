@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { waitForQrScan } from '@/lib/sync/sources/miapi'
 import { getSession, updateSession, deleteSession } from '@/lib/sync/qr-session'
+import { encryptToken } from '@/lib/sync/crypto'
 
 /**
  * POST /api/v1/sync/login/qr-poll
@@ -110,12 +111,12 @@ async function saveToken(userId: string, token: any) {
       },
     },
     update: {
-      token: JSON.stringify(token),
+      token: encryptToken(JSON.stringify(token)),
     },
     create: {
       userId,
       sourceId: 'miapi',
-      token: JSON.stringify(token),
+      token: encryptToken(JSON.stringify(token)),
     },
   })
 }

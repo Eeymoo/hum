@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import config from '../lib/config.js'
-import { execSync } from 'child_process'
+import { request } from '../lib/api.js'
 
 const syncCmd = new Command('sync')
 
@@ -12,7 +12,6 @@ syncCmd
   .option('--login', '重新登录获取 Token')
   .option('--status', '查看同步任务历史')
   .action(async (options) => {
-    const apiUrl = config.get('apiUrl') || 'http://localhost:3000'
     const apiKey = config.get('apiKey')
 
     if (!apiKey) {
@@ -22,26 +21,21 @@ syncCmd
 
     // 查看同步历史
     if (options.status) {
-      return showSyncStatus(apiUrl, apiKey, options.source)
+      return showSyncStatus(options.source)
     }
 
     // 重新登录
     if (options.login) {
-      return doLogin(apiUrl, apiKey, options.source)
+      return doLogin(options.source)
     }
 
     // 执行同步
-    return doSync(apiUrl, apiKey, options)
+    return doSync(options)
   })
 
-async function showSyncStatus(apiUrl, apiKey, sourceId) {
+async function showSyncStatus(sourceId) {
   try {
-    const url = `${apiUrl}/api/v1/sync/jobs?sourceId=${sourceId}&limit=10`
-    const resp = execSync(`curl -s -H "Authorization: Bearer ${apiKey}" "${url}"`, {
-      encoding: 'utf-8',
-      timeout: 10000,
-    })
-    const data = JSON.parse(resp)
+    const data = await request(`/sync/jobs?sourceId=${encodeURIComponent(sourceId)}&limit=10`)
 
     if (!data.jobs || data.jobs.length === 0) {
       console.log('暂无同步记录')
@@ -76,17 +70,15 @@ async function showSyncStatus(apiUrl, apiKey, sourceId) {
   }
 }
 
-async function doLogin(apiUrl, apiKey, sourceId) {
+async function doLogin(sourceId) {
   console.log(`正在发起 ${sourceId} 登录...`)
   console.log()
 
   try {
-    const url = `${apiUrl}/api/v1/sync/login`
-    const resp = execSync(
-      `curl -s -X POST -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"sourceId":"${sourceId}"}' "${url}"`,
-      { encoding: 'utf-8', timeout: 5 * 60 * 1000 },
-    )
-    const data = JSON.parse(resp)
+    const data = await request('/sync/login', {
+      method: 'POST',
+      body: JSON.stringify({ sourceId }),
+    })
 
     if (data.success) {
       console.log('✅ 登录成功！Token 已保存')
@@ -98,7 +90,7 @@ async function doLogin(apiUrl, apiKey, sourceId) {
   }
 }
 
-async function doSync(apiUrl, apiKey, options) {
+async function doSync(options) {
   const body = {
     sourceId: options.source,
   }
@@ -109,12 +101,10 @@ async function doSync(apiUrl, apiKey, options) {
   console.log(`正在同步数据 (source: ${options.source})...`)
 
   try {
-    const url = `${apiUrl}/api/v1/sync/trigger`
-    const resp = execSync(
-      `curl -s -X POST -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '${JSON.stringify(body)}' "${url}"`,
-      { encoding: 'utf-8', timeout: 60 * 1000 },
-    )
-    const data = JSON.parse(resp)
+    const data = await request('/sync/trigger', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
 
     if (data.success) {
       const r = data.syncedRecords

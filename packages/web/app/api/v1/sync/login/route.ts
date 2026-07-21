@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import prisma from '@/lib/prisma'
 import { syncRegistry, registerBuiltinSources } from '@/lib/sync/registry'
+import { encryptToken } from '@/lib/sync/crypto'
 
 /**
  * POST /api/v1/sync/login
@@ -76,12 +77,12 @@ export async function POST(req: NextRequest) {
         },
       },
       update: {
-        token: JSON.stringify(token),
+        token: encryptToken(JSON.stringify(token)),
       },
       create: {
         userId: session.user.id,
         sourceId,
-        token: JSON.stringify(token),
+        token: encryptToken(JSON.stringify(token)),
       },
     })
 

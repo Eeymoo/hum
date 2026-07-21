@@ -265,6 +265,58 @@ Authorization: Bearer <access-token>
 }
 ```
 
+### 数据同步
+
+> 第三方健康数据云端同步。当前支持小米运动健康（`miapi` 数据源）。
+> ⚠️ 数据同步需配置 `SYNC_TOKEN_SECRET` 环境变量（用于加密存储第三方凭据），且仅在长驻 Node.js 进程下可用定时同步（不支持 serverless）。
+
+| 方法 | 路径 | 说明 | 认证 |
+|------|------|------|------|
+| GET | `/api/v1/sync/sources` | 列出已注册的数据源及其配置 schema | 登录 |
+| GET | `/api/v1/sync/config` | 查询当前用户的同步配置（开关、频率、绑定状态、最后同步时间） | 登录 |
+| POST | `/api/v1/sync/config` | 保存同步配置（开关、cron 频率） | 写权限 |
+| POST | `/api/v1/sync/trigger` | 手动触发一次同步，可选 `startDate`/`endDate` | 写权限 |
+| GET | `/api/v1/sync/jobs` | 查询同步任务历史（`limit` 默认 10） | 登录 |
+| POST | `/api/v1/sync/login` | 账号密码登录或手动导入 Token 绑定 | 写权限 |
+| POST | `/api/v1/sync/login/qr` | 生成二维码，返回 `sessionId` 与二维码图片 URL | 写权限 |
+| POST | `/api/v1/sync/login/qr-poll` | 轮询扫码状态（`waiting`/`scanned`/`expired`/`error`） | 写权限 |
+
+**GET /api/v1/sync/sources**
+
+```json
+{
+  "sources": [
+    {
+      "id": "miapi",
+      "name": "小米健康 API",
+      "description": "通过小米健康 API 同步步数、心率、睡眠、体重等健康数据（支持二维码/密码登录）",
+      "configSchema": [...]
+    }
+  ]
+}
+```
+
+**POST /api/v1/sync/trigger**
+
+请求体（均可选）：
+```json
+{ "startDate": "2026-01-01", "endDate": "2026-01-31" }
+```
+
+成功返回：
+```json
+{
+  "jobId": "...",
+  "success": true,
+  "syncedRecords": { "exercise": 7, "sleep": 7, "weight": 2, "diet": 0 },
+  "errors": []
+}
+```
+
+未开启同步 / 未绑定凭据时返回 400，已有运行中任务返回 409。
+
+> 注：数据同步走小米健康聚合数据接口（`get_aggregated_fitness_data_by_time`，RC4 加密签名 + `daily_report` tag）与原始测量接口（`get_fitness_data_by_time`）。支持步数/心率/睡眠/卡路里/血氧/有效站立/中高强度/压力（按天聚合）+ 体重（原始测量，含体脂/肌肉/骨量/水分/内脏脂肪）共 9 类数据同步入库（sourceId 幂等）。
+
 ### 其他
 
 | 方法 | 路径 | 说明 |

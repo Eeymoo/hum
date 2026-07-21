@@ -352,6 +352,34 @@ hum timeline --start 2024-01-01 --end 2024-01-31
 
 ---
 
+## 数据同步
+
+### `hum sync`
+
+手动触发第三方健康数据同步（当前支持小米运动健康）。需先通过 Web 设置页绑定小米账号（二维码扫码）。
+
+```bash
+hum sync                         # 触发一次同步（默认最近 7 天）
+hum sync --start 2026-01-01 --end 2026-01-31   # 指定日期范围
+hum sync --source miapi          # 指定数据源（默认 miapi）
+hum sync --status                # 查看最近同步任务历史
+hum sync --login                 # 重新登录获取 Token（交互式输入账号密码）
+```
+
+选项：
+
+| 选项 | 说明 |
+|------|------|
+| `-s, --source <id>` | 数据源 ID，默认 `miapi` |
+| `--start <date>` | 同步起始日期（YYYY-MM-DD） |
+| `--end <date>` | 同步结束日期（YYYY-MM-DD） |
+| `--status` | 查看同步任务历史 |
+| `--login` | 重新登录绑定 |
+
+> 同步也可在 Web 设置页操作；定时同步需在服务端配置 cron（见部署文档）。
+
+---
+
 ## 时间范围格式
 
 所有 `--last` 参数支持以下格式：

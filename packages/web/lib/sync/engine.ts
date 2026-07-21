@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { syncRegistry, registerBuiltinSources } from './registry'
+import { decryptToken, encryptToken, isSyncEncryptionAvailable } from './crypto'
 import type { AuthToken, SyncResult } from './types'
 
 /**
@@ -48,11 +49,20 @@ export class SyncEngine {
     }
 
     try {
-      // 解析配置和 Token
+      // 解析配置和 Token（Token 加密存储，这里解密）
       const config = JSON.parse(job.sourceConfig.config || '{}')
-      const token: AuthToken = job.sourceConfig.token
-        ? JSON.parse(job.sourceConfig.token)
-        : {}
+      let token: AuthToken = {}
+      if (job.sourceConfig.token) {
+        const plain = decryptToken(job.sourceConfig.token)
+        token = JSON.parse(plain)
+        // 明文懒迁移：读取到旧明文凭证时重写为密文
+        if (isSyncEncryptionAvailable() && plain === job.sourceConfig.token) {
+          await prisma.syncSourceConfig.update({
+            where: { id: job.sourceConfig.id },
+            data: { token: encryptToken(plain) },
+          })
+        }
+      }
 
       const result = await source.sync({
         userId: job.userId,
