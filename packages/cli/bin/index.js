@@ -10,6 +10,7 @@ import exercise from '../src/commands/exercise.js'
 import diet from '../src/commands/diet.js'
 import food from '../src/commands/food.js'
 import sleep from '../src/commands/sleep.js'
+import sync from '../src/commands/sync.js'
 import { checkVersion, getCliVersion } from '../src/lib/version-check.js'
 
 const program = new Command()
@@ -35,5 +36,6 @@ program.addCommand(exercise)
 program.addCommand(diet)
 program.addCommand(food)
 program.addCommand(sleep)
+program.addCommand(sync)
 
 program.parse()

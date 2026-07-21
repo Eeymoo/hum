@@ -26,6 +26,7 @@ Thumbs.db
 # Prisma
 *.db
 *.db-journal
+packages/web/prisma/migrations/
 
 # Uploads
 packages/web/uploads/

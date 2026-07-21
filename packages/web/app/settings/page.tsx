@@ -8,6 +8,7 @@ import { ExportButton } from './ExportButton'
 import TimezoneSettings from './TimezoneSettings'
 import TargetWeightSettings from './TargetWeightSettings'
 import ShareSettings from './share/ShareSettings'
+import SyncSettings from './sync/SyncSettings'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -76,6 +77,14 @@ export default async function SettingsPage() {
             <TargetWeightSettings />
 
             <ShareSettings />
+
+            <Card>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">数据同步</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                从外部设备和服务同步健康数据
+              </p>
+              <SyncSettings />
+            </Card>
 
             <Card>
               <h2 className="text-lg font-medium text-gray-900 mb-4">{t('apiKeys')}</h2>
