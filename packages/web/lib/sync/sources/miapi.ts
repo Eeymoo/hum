@@ -190,6 +190,22 @@ export function parseAggValue(value: unknown): Record<string, any> {
 }
 
 /**
+ * Unix 秒时间戳 → 东八区日期字符串 YYYY-MM-DD
+ * 小米返回的 entry.time 是 UTC 当天 0 点，需转成用户时区（中国 = Asia/Shanghai）
+ */
+function toLocalDateStr(unixSec: number): string {
+  return new Date(unixSec * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' })
+}
+
+/**
+ * Unix 秒时间戳 → 东八区可读时间字符串（用于 bedTime/wakeTime 等 String 字段）
+ * 格式: YYYY-MM-DD HH:mm:ss
+ */
+function toLocalTimeStr(unixSec: number): string {
+  return new Date(unixSec * 1000).toLocaleString('en-CA', { timeZone: 'Asia/Shanghai', hour12: false }).replace(',', '')
+}
+
+/**
  * 原始测量数据查询（单次测量记录，如体重/血压）
  *
  * 端点: /app/v1/data/get_fitness_data_by_time
@@ -709,7 +725,7 @@ export class MiApiSource implements SyncSource {
         try {
           const value = parseAggValue(entry.value)
           const date = new Date((entry.time as number) * 1000)
-          const dateStr = date.toISOString().split('T')[0]
+          const dateStr = toLocalDateStr(entry.time as number)
           const sourceId = `miapi_steps_${dateStr}`
 
           await prisma.exercise.upsert({
@@ -756,8 +772,7 @@ export class MiApiSource implements SyncSource {
       for (const entry of hrList) {
         try {
           const value = parseAggValue(entry.value)
-          const date = new Date((entry.time as number) * 1000)
-          const dateStr = date.toISOString().split('T')[0]
+          const dateStr = toLocalDateStr(entry.time as number)
           const sourceId = `miapi_hr_${dateStr}`
 
           await prisma.exercise.upsert({
@@ -805,8 +820,7 @@ export class MiApiSource implements SyncSource {
       for (const entry of sleepList) {
         try {
           const value = parseAggValue(entry.value)
-          const date = new Date((entry.time as number) * 1000)
-          const dateStr = date.toISOString().split('T')[0]
+          const dateStr = toLocalDateStr(entry.time as number)
           const sourceId = `miapi_sleep_${dateStr}`
 
           // 取主睡眠段（通常是最长的那段）
@@ -827,8 +841,8 @@ export class MiApiSource implements SyncSource {
             create: {
               userId,
               duration: durationMin / 60,
-              bedTime: new Date(bedtimeSec * 1000).toISOString(),
-              wakeTime: new Date(wakeSec * 1000).toISOString(),
+              bedTime: toLocalTimeStr(bedtimeSec),
+              wakeTime: toLocalTimeStr(wakeSec),
               quality: value.sleep_score || 50,
               deepSleep: deepMin > 0 ? deepMin / 60 : null,
               remSleep: remMin > 0 ? remMin / 60 : null,
@@ -839,6 +853,8 @@ export class MiApiSource implements SyncSource {
             },
             update: {
               duration: durationMin / 60,
+              bedTime: toLocalTimeStr(bedtimeSec),
+              wakeTime: toLocalTimeStr(wakeSec),
               quality: value.sleep_score || 50,
               deepSleep: deepMin > 0 ? deepMin / 60 : null,
               remSleep: remMin > 0 ? remMin / 60 : null,
@@ -921,8 +937,7 @@ export class MiApiSource implements SyncSource {
         for (const entry of list) {
           try {
             const value = parseAggValue(entry.value)
-            const date = new Date((entry.time as number) * 1000)
-            const dateStr = date.toISOString().split('T')[0]
+            const dateStr = toLocalDateStr(entry.time as number)
             const sourceId = `${sourcePrefix}_${dateStr}`
 
             await prisma.exercise.upsert({

@@ -66,6 +66,7 @@ export default function SyncSettings() {
   const [jobs, setJobs] = useState<SyncJob[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [syncRange, setSyncRange] = useState('7d') // 7d=7天, 30d=30天, 90d=90天, all=全量
   const [logging, setLogging] = useState(false)
   const [loginMessage, setLoginMessage] = useState('')
   const [editConfig, setEditConfig] = useState<Record<string, string>>({})
@@ -273,10 +274,16 @@ export default function SyncSettings() {
   const handleTriggerSync = async () => {
     setSyncing(true)
     try {
+      const body: Record<string, string> = {}
+      if (syncRange !== 'all') {
+        const days = parseInt(syncRange)
+        const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        body.startDate = start.toISOString().split('T')[0]
+      }
       const res = await fetch('/api/v1/sync/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok) {
@@ -344,13 +351,26 @@ export default function SyncSettings() {
               <h3 className="text-base font-medium text-gray-900">{currentSource.name}</h3>
               <p className="text-sm text-gray-500">{currentSource.description}</p>
             </div>
-            <button
-              onClick={handleTriggerSync}
-              disabled={syncing || !currentSourceConfig?.hasToken}
-              className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {syncing ? '同步中...' : '立即同步'}
-            </button>
+            <div className="flex items-center gap-2">
+              <select
+                value={syncRange}
+                onChange={(e) => setSyncRange(e.target.value)}
+                className="px-2 py-1.5 text-sm border border-gray-300 rounded-md text-gray-700"
+              >
+                <option value="7d">最近 7 天</option>
+                <option value="30d">最近 30 天</option>
+                <option value="90d">最近 90 天</option>
+                <option value="365d">最近 1 年</option>
+                <option value="all">全量同步</option>
+              </select>
+              <button
+                onClick={handleTriggerSync}
+                disabled={syncing || !currentSourceConfig?.hasToken}
+                className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {syncing ? '同步中...' : '立即同步'}
+              </button>
+            </div>
           </div>
 
           {/* 认证状态 */}

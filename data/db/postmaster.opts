@@ -1,1 +1,0 @@
-/tmp/opencode/epg/node_modules/@embedded-postgres/linux-x64/native/bin/postgres "-D" "/home/opencode/Codes/hum/data/db" "-p" "5433"
