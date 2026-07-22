@@ -275,7 +275,9 @@ export default function SyncSettings() {
     setSyncing(true)
     try {
       const body: Record<string, string> = {}
-      if (syncRange !== 'all') {
+      if (syncRange === 'all') {
+        body.startDate = '2020-01-01'
+      } else {
         const days = parseInt(syncRange)
         const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
         body.startDate = start.toISOString().split('T')[0]

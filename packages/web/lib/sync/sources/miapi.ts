@@ -165,7 +165,7 @@ async function getAggregatedData(
   key: string,
   startTimeSec: number,
   endTimeSec: number,
-  limit = 100,
+  limit = 2000,
 ): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
   const resp = await encryptedHealthGet(token, 'data/get_aggregated_fitness_data_by_time', {
     relative_uid: 0,
@@ -217,7 +217,7 @@ async function getFitnessData(
   key: string,
   startTimeSec: number,
   endTimeSec: number,
-  limit = 100,
+  limit = 2000,
 ): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
   const resp = await encryptedHealthGet(token, 'data/get_fitness_data_by_time', {
     relative_uid: 0,
