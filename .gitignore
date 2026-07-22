@@ -41,3 +41,6 @@ pnpm-debug.log*
 
 # opencode agent 工作目录（本地）
 .opencode/
+
+# embedded-postgres 测试产物
+data/
