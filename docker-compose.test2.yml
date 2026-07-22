@@ -1,0 +1,67 @@
+services:
+  hum-test-postgres:
+    image: postgres:16-alpine
+    container_name: hum-test-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=hum
+      - POSTGRES_PASSWORD=testpass123
+      - POSTGRES_DB=hum
+    volumes:
+      - hum_postgres_data_test2:/var/lib/postgresql/data
+    networks:
+      - hum_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hum -d hum"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  hum-api:
+    image: ghcr.io/eeymoo/hum-api:v0.2.0-beta.1
+    container_name: hum-test-api
+    restart: unless-stopped
+    ports:
+      - "13230:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=postgresql
+      # 主机名用服务名 hum-test-postgres，密码和上面 POSTGRES_PASSWORD 一致
+      - DATABASE_URL=postgresql://hum:testpass123@hum-test-postgres:5432/hum?schema=public
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - AUTH_TRUST_HOST=true
+      - SYNC_TOKEN_SECRET=${SYNC_TOKEN_SECRET:-default-secret-for-test}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+    volumes:
+      - hum_api_uploads:/app/uploads
+    networks:
+      hum_network:
+      ai_net:
+        ipv4_address: 10.10.4.14
+    depends_on:
+      hum-test-postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  hum_api_uploads:
+  hum_postgres_data_test2:
+
+networks:
+  hum_network:
+    driver: bridge
+  ai_net:
+    external: true

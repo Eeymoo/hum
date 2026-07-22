@@ -31,7 +31,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl libc6-compat
 ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 ENV LD_LIBRARY_PATH=/usr/lib
 RUN addgroup --system --gid 1001 nodejs
@@ -57,6 +57,7 @@ RUN printf '%s\n' \
     'set -e' \
     '' \
     'echo "🔄 Running database migration..."' \
+    'npx prisma --version' \
     'node scripts/prisma-switch.js' \
     'if [ "$DB_TYPE" = "postgresql" ]; then' \
     '  echo "📦 Using pre-generated PostgreSQL Prisma Client"' \
