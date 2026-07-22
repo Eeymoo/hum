@@ -715,11 +715,36 @@ export class MiApiSource implements SyncSource {
       }
     }
 
+    /**
+     * 分块拉取聚合数据（按 7 天一块，避免单次请求数据量过大或被限流）
+     * 返回所有块的合并结果
+     */
+    const fetchAggInChunks = async (key: string): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> => {
+      const CHUNK_SEC = 7 * 24 * 60 * 60 // 7 天（秒）
+      const all: Array<{ time: number; value: string; [k: string]: unknown }> = []
+      for (let chunkStart = startTimeSec; chunkStart < endTimeSec; chunkStart += CHUNK_SEC) {
+        const chunkEnd = Math.min(chunkStart + CHUNK_SEC, endTimeSec)
+        const list = await withRetry(() => getAggregatedData(miToken, key, chunkStart, chunkEnd))
+        all.push(...list)
+      }
+      return all
+    }
+
+    /** 分块拉取原始测量数据（同上） */
+    const fetchFitInChunks = async (key: string) => {
+      const CHUNK_SEC = 7 * 24 * 60 * 60
+      const all: Array<{ time: number; value: string; [k: string]: unknown }> = []
+      for (let chunkStart = startTimeSec; chunkStart < endTimeSec; chunkStart += CHUNK_SEC) {
+        const chunkEnd = Math.min(chunkStart + CHUNK_SEC, endTimeSec)
+        const list = await withRetry(() => getFitnessData(miToken, key, chunkStart, chunkEnd))
+        all.push(...list)
+      }
+      return all
+    }
+
     // --- 同步步数数据（get_aggregated_fitness_data_by_time, key=steps）---
     try {
-      const stepsList = await withRetry(() =>
-        getAggregatedData(miToken, 'steps', startTimeSec, endTimeSec),
-      )
+      const stepsList = await fetchAggInChunks('steps')
 
       for (const entry of stepsList) {
         try {
@@ -765,9 +790,7 @@ export class MiApiSource implements SyncSource {
 
     // --- 同步心率数据（key=heart_rate）---
     try {
-      const hrList = await withRetry(() =>
-        getAggregatedData(miToken, 'heart_rate', startTimeSec, endTimeSec),
-      )
+      const hrList = await fetchAggInChunks('heart_rate')
 
       for (const entry of hrList) {
         try {
@@ -813,9 +836,7 @@ export class MiApiSource implements SyncSource {
 
     // --- 同步睡眠数据（key=sleep，segment_details 含 bedtime/wake_up_time/sleep_deep_duration）---
     try {
-      const sleepList = await withRetry(() =>
-        getAggregatedData(miToken, 'sleep', startTimeSec, endTimeSec),
-      )
+      const sleepList = await fetchAggInChunks('sleep')
 
       for (const entry of sleepList) {
         try {
@@ -872,9 +893,7 @@ export class MiApiSource implements SyncSource {
 
     // --- 同步体重数据（get_fitness_data_by_time 原始测量记录，key=weight）---
     try {
-      const weightList = await withRetry(() =>
-        getFitnessData(miToken, 'weight', startTimeSec, endTimeSec),
-      )
+      const weightList = await fetchFitInChunks('weight')
 
       for (const entry of weightList) {
         try {
@@ -931,9 +950,7 @@ export class MiApiSource implements SyncSource {
     ]
     for (const { key, sourcePrefix, mapType } of otherAggTypes) {
       try {
-        const list = await withRetry(() =>
-          getAggregatedData(miToken, key, startTimeSec, endTimeSec),
-        )
+        const list = await fetchAggInChunks(key)
         for (const entry of list) {
           try {
             const value = parseAggValue(entry.value)

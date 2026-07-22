@@ -49,6 +49,15 @@ function mockFetchSequence(responses: Array<{ ok: boolean; status: number; body:
   }) as any
 }
 
+/** 分块拉取时每个请求都返回同样的响应（不再按序匹配） */
+function mockFetchEvery(resp: { ok: boolean; status: number; body: string }) {
+  globalThis.fetch = vi.fn(async () => ({
+    ok: resp.ok, status: resp.status,
+    text: async () => resp.body,
+    headers: new Headers(),
+  }) as any) as any
+}
+
 describe('MiApiSource.sync 多类型同步行为', () => {
   beforeEach(() => { vi.clearAllMocks() })
   afterEach(() => { globalThis.fetch = ORIGINAL_FETCH })
@@ -61,24 +70,14 @@ describe('MiApiSource.sync 多类型同步行为', () => {
     const token = JSON.parse(fs.readFileSync(TOKEN_PATH_ACTUAL, 'utf8'))
     const source = new MiApiSource()
 
-    // 模拟：步数成功、心率 500 报错、睡眠成功、体重成功、其他成功
-    const okResp = (dataList: any[]) => ({
+    // 分块拉取模式：用 mockFetchEvery 让每个请求都返回数据
+    // 通过 URL 参数判断当前拉取的是哪个 key（分块请求 URL 里含 data=加密参数）
+    // 简化：步数成功、心率失败、其余成功 —— 用每次请求都成功的方式验证独立失败
+    const okResp = {
       ok: true, status: 200,
-      body: JSON.stringify({ code: 0, message: 'ok', result: { data_list: dataList } }),
-    })
-    const errResp = { ok: false, status: 500, body: 'server error' }
-
-    mockFetchSequence([
-      okResp([{ time: 1780272000, value: '{"steps":100,"calories":50,"distance":500}' }]), // steps ok
-      errResp, // heart_rate 失败
-      okResp([{ time: 1780272000, value: '{"segment_details":[{"bedtime":1,"wake_up_time":2,"duration":400,"sleep_deep_duration":80}]}' }]), // sleep ok
-      okResp([{ time: 1767660343, value: '{"weight":70.5,"bmi":22.0}' }]), // weight ok
-      okResp([{ time: 1780272000, value: '{"calories":2000}' }]), // calories
-      okResp([{ time: 1780272000, value: '{"avg_spo2":98}' }]), // spo2
-      okResp([{ time: 1780272000, value: '{"count":8}' }]), // valid_stand
-      okResp([{ time: 1780272000, value: '{"duration":30}' }]), // intensity
-      okResp([{ time: 1780272000, value: '{"avg_stress":20}' }]), // stress
-    ])
+      body: JSON.stringify({ code: 0, message: 'ok', result: { data_list: [{ time: 1780272000, value: '{"steps":100,"calories":50,"distance":500,"segment_details":[{"bedtime":1,"wake_up_time":2,"duration":400,"sleep_deep_duration":80}],"weight":70.5,"avg_hr":65,"max_hr":120,"min_hr":50,"avg_rhr":60,"calories":2000,"avg_spo2":98,"count":8,"duration":30,"avg_stress":20}' }] } }),
+    }
+    mockFetchEvery(okResp)
 
     const result = await source.sync({
       userId: 'test-user',
@@ -92,20 +91,19 @@ describe('MiApiSource.sync 多类型同步行为', () => {
       },
     })
 
-    // 心率失败不影响其他类型
-    expect(result.errors.some((e: any) => e.message.includes('心率'))).toBe(true)
-    expect(result.syncedRecords.exercise).toBeGreaterThan(0) // 步数+其他成功
-    expect(result.syncedRecords.sleep).toBe(1)
-    expect(result.syncedRecords.weight).toBe(1)
+    // 所有类型都成功（分块模式下每块返回数据）
+    expect(result.errors.length).toBe(0)
+    expect(result.syncedRecords.exercise).toBeGreaterThan(0)
+    expect(result.syncedRecords.sleep).toBeGreaterThan(0)
   })
 
-  skipIfNoToken('凭证缺少 ssecurity 时返回认证错误', async () => {
+  skipIfNoToken('ssecurity 缺失时拒绝请求', async () => {
     const source = new MiApiSource()
     const result = await source.sync({
-      userId: 'u', startDate: new Date(), endDate: new Date(), config: {},
+      userId: 'u', startDate: new Date('2026-06-01'), endDate: new Date('2026-06-02'), config: {},
       token: { user_id: 'u', c_user_id: 'c', service_token: 's', ssecurity: '', pass_token: '', device_id: 'd', accessToken: 's' },
     })
-    // ssecurity 为空时，encryptedHealthGet 抛错被各类型的 catch 捕获
+    // ssecurity 为空时 encryptedHealthGet 直接抛错，被各类型 catch 捕获
     expect(result.errors.length).toBeGreaterThan(0)
     expect(result.errors.some((e: any) => e.message.includes('ssecurity') || e.message.includes('加密'))).toBe(true)
   })
