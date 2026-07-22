@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getAuth, requireWriteAuth } from '@/lib/auth'
 import { getQrCode } from '@/lib/sync/sources/miapi'
 import { createSession } from '@/lib/sync/qr-session'
 
@@ -14,8 +14,8 @@ import { createSession } from '@/lib/sync/qr-session'
  * Response: { qrImageUrl, sessionId }
  */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await requireWriteAuth(await getAuth(req))
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

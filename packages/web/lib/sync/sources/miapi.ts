@@ -603,7 +603,7 @@ export class MiApiSource implements SyncSource {
 
     // 手动导入 Token 模式（兜底方案）
     // 必填: service_token, c_user_id
-    // 可选: pass_token, user_id, device_id（有 pass_token 时支持自动刷新）
+    // 可选: ssecurity（RC4 加密必需）, pass_token, user_id, device_id
     const serviceToken = String(credentials.service_token || '')
     const cUserId = String(credentials.c_user_id || '')
     if (serviceToken && cUserId) {
@@ -611,7 +611,7 @@ export class MiApiSource implements SyncSource {
         user_id: String(credentials.user_id || ''),
         c_user_id: cUserId,
         service_token: serviceToken,
-        ssecurity: '',
+        ssecurity: String(credentials.ssecurity || ''),
         pass_token: String(credentials.pass_token || ''),
         device_id: String(credentials.device_id || generateDeviceId()),
         accessToken: serviceToken,

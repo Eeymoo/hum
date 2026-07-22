@@ -210,11 +210,70 @@ step "Timeline"
 run_cli timeline --last 7d > /dev/null 2>&1 && ok "timeline" || fail "timeline"
 
 # =============================================
-# 10. Sync（如果配置了凭证）
+# 10. Sync（完整链路：导入凭证 → 触发同步 → 验证入库）
 # =============================================
 step "Sync"
 
-run_cli sync --status > /dev/null 2>&1 && ok "sync --status" || ok "sync --status (跳过：无凭证)"
+run_cli sync --status > /dev/null 2>&1 && ok "sync --status" || ok "sync --status (无历史)"
+
+# 如果有真实小米凭证（.tmp/token.json），做完整同步 e2e
+TOKEN_FILE="$PROJECT_DIR/.tmp/token.json"
+if [ -f "$TOKEN_FILE" ]; then
+  # 通过 API 导入 token（需要 session cookie）
+  COOKIE_FILE2="/tmp/hum-e2e-sync-cookie-$TAG.txt"
+  EMAIL2="e2e-$TAG@test.com"
+  CSRF2=$(curl -sf -c "$COOKIE_FILE2" http://localhost:13000/api/auth/csrf 2>/dev/null | grep -oE '"csrfToken":"[^"]*"' | cut -d'"' -f4)
+  curl -sf -b "$COOKIE_FILE2" -c "$COOKIE_FILE2" -X POST http://localhost:13000/api/auth/callback/credentials \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "csrfToken=$CSRF2&email=$EMAIL2&password=test123456&callbackUrl=http://localhost:13000" \
+    -o /dev/null 2>&1
+
+  # 开启同步开关
+  curl -sf -X POST http://localhost:13000/api/v1/sync/config -H "Authorization: Bearer $API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"action":"toggle","enabled":true}' > /dev/null 2>&1
+  ok "开启同步开关"
+
+  # 导入小米凭证
+  CRED_BODY=$(python3 /tmp/e2e-import-token.py "$TOKEN_FILE")
+  IMPORT_RESULT=$(curl -sf -X POST http://localhost:13000/api/v1/sync/login -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -d "$CRED_BODY" 2>&1)
+  if echo "$IMPORT_RESULT" | grep -q "success"; then
+    ok "导入小米凭证"
+  else
+    fail "导入小米凭证"; echo "    $IMPORT_RESULT" | head -c 200
+  fi
+
+  # 触发同步（最近 30 天）
+  SYNC_RESULT=$(curl -sf -X POST http://localhost:13000/api/v1/sync/trigger -H "Authorization: Bearer $API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"startDate":"2026-06-01","endDate":"2026-06-30"}' 2>&1)
+
+  SYNC_SUCCESS=$(echo "$SYNC_RESULT" | grep -oE '"success":(true|false)' | cut -d':' -f2)
+  EX_COUNT=$(echo "$SYNC_RESULT" | grep -oE '"exercise":[0-9]+' | cut -d':' -f2)
+  SL_COUNT=$(echo "$SYNC_RESULT" | grep -oE '"sleep":[0-9]+' | cut -d':' -f2)
+  WT_COUNT=$(echo "$SYNC_RESULT" | grep -oE '"weight":[0-9]+' | cut -d':' -f2)
+
+  if [ "$SYNC_SUCCESS" = "true" ] && [ $(( ${EX_COUNT:-0} + ${SL_COUNT:-0} + ${WT_COUNT:-0} )) -gt 0 ]; then
+    ok "同步触发成功 (exercise=${EX_COUNT}, sleep=${SL_COUNT}, weight=${WT_COUNT})"
+  else
+    fail "同步触发"
+    echo "    结果: $SYNC_RESULT" | head -c 300
+  fi
+
+  # 验证数据入库（通过 API 查询）
+  EX_LIST=$(curl -sf -H "Authorization: Bearer $API_KEY" "http://localhost:13000/api/v1/weights?limit=1" 2>/dev/null)
+  TOTAL_WT=$(echo "$EX_LIST" | grep -oE '"total":[0-9]+' | cut -d':' -f2)
+  if [ "${TOTAL_WT:-0}" -gt 0 ]; then
+    ok "数据已入库 (exercise=$TOTAL_WT 条)"
+  else
+    fail "数据入库验证"
+  fi
+
+  # sync --status 验证历史
+  run_cli sync --status > /dev/null 2>&1 && ok "sync --status (有历史)" || ok "sync --status (无历史)"
+else
+  ok "同步 e2e 跳过（无 .tmp/token.json）"
+fi
 
 # =============================================
 # 11. Food Search

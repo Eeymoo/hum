@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { auth } from '@/auth'
+import { getAuth } from '@/lib/auth'
 
 /**
  * GET /api/v1/sync/jobs?sourceId=xxx&limit=20
  * 获取同步任务历史
  */
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await getAuth(req)
+  if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const sourceId = searchParams.get('sourceId')
   const limit = parseInt(searchParams.get('limit') || '20', 10)
 
-  const where: any = { userId: session.user.id }
+  const where: any = { userId: authResult.userId }
   if (sourceId) {
     where.sourceId = sourceId
   }

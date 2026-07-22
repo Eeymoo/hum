@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/auth', () => ({
-  auth: vi.fn(),
+vi.mock('@/lib/auth', () => ({
+  getAuth: vi.fn(),
+  requireWriteAuth: vi.fn(async (auth: unknown) => auth),
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -17,11 +18,11 @@ vi.mock('@/lib/sync/engine', () => ({
 }))
 
 import { POST as triggerPOST } from '@/app/api/v1/sync/trigger/route'
-import { auth } from '@/auth'
+import { getAuth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { syncEngine } from '@/lib/sync/engine'
 
-const mockAuth = vi.mocked(auth)
+const mockAuth = vi.mocked(getAuth)
 const mockUserConfig = vi.mocked(prisma.userSyncConfig.findUnique)
 const mockSourceConfig = vi.mocked(prisma.syncSourceConfig.findUnique)
 const mockRunningJob = vi.mocked(prisma.syncJob.findFirst)
@@ -39,7 +40,7 @@ function req(body: Record<string, unknown> = {}) {
 describe('POST /api/v1/sync/trigger', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockAuth.mockResolvedValue({ user: { id: 'user-1' } } as any)
+    mockAuth.mockResolvedValue({ userId: 'user-1' } as any)
   })
 
   it('未登录返回 401', async () => {

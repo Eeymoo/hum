@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getAuth, requireWriteAuth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { syncRegistry, registerBuiltinSources } from '@/lib/sync/registry'
 import { encryptToken } from '@/lib/sync/crypto'
@@ -16,8 +16,8 @@ import { encryptToken } from '@/lib/sync/crypto'
  * Response: { success: true } 或 { error: "...", step: "retry" }
  */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await requireWriteAuth(await getAuth(req))
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   // 校验 UserSyncConfig：enabled=true
   const userConfig = await prisma.userSyncConfig.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: authResult.userId },
   })
 
   if (!userConfig || !userConfig.enabled) {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     await prisma.syncSourceConfig.upsert({
       where: {
         userId_sourceId: {
-          userId: session.user.id,
+          userId: authResult.userId,
           sourceId,
         },
       },
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         token: encryptToken(JSON.stringify(token)),
       },
       create: {
-        userId: session.user.id,
+        userId: authResult.userId,
         sourceId,
         token: encryptToken(JSON.stringify(token)),
       },

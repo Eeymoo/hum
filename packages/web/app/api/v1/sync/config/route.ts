@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { auth } from '@/auth'
+import { getAuth, requireWriteAuth } from '@/lib/auth'
 import { scheduleTask, stopTask } from '@/lib/sync/scheduler'
 
 const DEFAULT_SOURCE_ID = 'miapi'
@@ -37,16 +37,16 @@ function parseSyncConfig(raw: string | null): SyncConfig {
  * GET /api/v1/sync/config
  * 返回用户的 UserSyncConfig 及所有 SyncSourceConfig
  */
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) {
+export async function GET(req: NextRequest) {
+  const authResult = await getAuth(req)
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const [userConfig, sourceConfigs] = await Promise.all([
-    ensureUserSyncConfig(session.user.id),
+    ensureUserSyncConfig(authResult.userId),
     prisma.syncSourceConfig.findMany({
-      where: { userId: session.user.id },
+      where: { userId: authResult.userId },
       orderBy: { createdAt: 'desc' },
     }),
   ])
@@ -74,21 +74,21 @@ export async function GET() {
  * 操作：toggle | save_config
  */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await requireWriteAuth(await getAuth(req))
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const body = await req.json()
   const { action } = body
 
-  const userConfig = await ensureUserSyncConfig(session.user.id)
+  const userConfig = await ensureUserSyncConfig(authResult.userId)
 
   switch (action) {
     case 'toggle':
-      return handleToggle(session.user.id, userConfig, body.enabled)
+      return handleToggle(authResult.userId, userConfig, body.enabled)
     case 'save_config':
-      return handleSaveConfig(session.user.id, userConfig, body)
+      return handleSaveConfig(authResult.userId, userConfig, body)
     default:
       return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
   }
@@ -215,8 +215,8 @@ async function handleSaveConfig(
  * 删除同步源配置
  */
 export async function DELETE(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await getAuth(req)
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -228,7 +228,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   const config = await prisma.syncSourceConfig.findUnique({
-    where: { userId_sourceId: { userId: session.user.id, sourceId } },
+    where: { userId_sourceId: { userId: authResult.userId, sourceId } },
   })
 
   if (config) {

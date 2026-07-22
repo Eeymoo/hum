@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getAuth, requireWriteAuth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { waitForQrScan } from '@/lib/sync/sources/miapi'
 import { getSession, updateSession, deleteSession } from '@/lib/sync/qr-session'
@@ -20,8 +20,8 @@ import { encryptToken } from '@/lib/sync/crypto'
 const pollingPromises = new Map<string, Promise<void>>()
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await requireWriteAuth(await getAuth(req))
+  if (!authResult?.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   if (qrSession.status === 'scanned') {
     // 保存 token 到数据库
     if (qrSession.token) {
-      await saveToken(session.user.id, qrSession.token)
+      await saveToken(authResult.userId, qrSession.token)
     }
     // 清理会话
     deleteSession(sessionId)

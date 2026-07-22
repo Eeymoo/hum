@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getAuth, requireWriteAuth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { syncEngine } from '@/lib/sync/engine'
 
@@ -10,13 +10,13 @@ const SOURCE_ID = 'miapi'
  * 手动触发同步（守卫逻辑：enabled + token + 无运行中任务）
  */
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const authResult = await requireWriteAuth(await getAuth(req))
+  if (!authResult) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const userConfig = await prisma.userSyncConfig.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: authResult.userId },
   })
 
   if (!userConfig || !userConfig.enabled) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   const sourceConfig = await prisma.syncSourceConfig.findUnique({
     where: {
-      userId_sourceId: { userId: session.user.id, sourceId: SOURCE_ID },
+      userId_sourceId: { userId: authResult.userId, sourceId: SOURCE_ID },
     },
   })
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   const runningJob = await prisma.syncJob.findFirst({
     where: {
-      userId: session.user.id,
+      userId: authResult.userId,
       sourceId: SOURCE_ID,
       status: 'running',
     },
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { jobId, result } = await syncEngine.createAndRunJob(
-      session.user.id,
+      authResult.userId,
       SOURCE_ID,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
