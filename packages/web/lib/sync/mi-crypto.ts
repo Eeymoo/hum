@@ -136,13 +136,41 @@ export function buildEncryptedParams(
   rawTree['rc4_hash__'] = rc4Hash
 
   // Step 4: 用连续 RC4 流加密所有值（按 key 字典序，共用一个密钥流）
+  // 使用独立函数实现（不依赖类/状态对象），与 .tmp 验证脚本完全一致，避免 webpack 编译差异
   const sortedEntries = Object.entries(rawTree).sort(([a], [b]) => a.localeCompare(b))
   const encryptedValues: Record<string, string> = {}
-  // 连续流：所有值顺序加密，密钥流不重置（跨值保持 RC4 状态）
-  const rc4State = createRc4State(snonceBytes)
+
+  // 初始化 RC4 状态（KSA + skip 1024）
+  const sBox = Array.from({ length: 256 }, (_, i) => i)
+  let jBox = 0
+  for (let i = 0; i < 256; i++) {
+    jBox = (jBox + sBox[i]! + snonceBytes[i % snonceBytes.length]!) & 0xff
+    const tmp = sBox[i]!
+    sBox[i] = sBox[jBox]!
+    sBox[jBox] = tmp
+  }
+  let iBox = 0
+  jBox = 0
+  for (let k = 0; k < 1024; k++) {
+    iBox = (iBox + 1) & 0xff
+    jBox = (jBox + sBox[iBox]!) & 0xff
+    const tmp = sBox[iBox]!
+    sBox[iBox] = sBox[jBox]!
+    sBox[jBox] = tmp
+  }
+
+  // 连续流加密所有值
   for (const [k] of sortedEntries) {
     const plainBytes = Buffer.from(rawTree[k]!, 'utf8')
-    const encBytes = rc4CryptContinue(rc4State, plainBytes)
+    const encBytes = new Uint8Array(plainBytes.length)
+    for (let idx = 0; idx < plainBytes.length; idx++) {
+      iBox = (iBox + 1) & 0xff
+      jBox = (jBox + sBox[iBox]!) & 0xff
+      const tmp = sBox[iBox]!
+      sBox[iBox] = sBox[jBox]!
+      sBox[jBox] = tmp
+      encBytes[idx] = plainBytes[idx]! ^ sBox[(sBox[iBox]! + sBox[jBox]!) & 0xff]!
+    }
     encryptedValues[k] = Buffer.from(encBytes).toString('base64')
   }
 
@@ -159,48 +187,7 @@ export function buildEncryptedParams(
 }
 
 // ── 连续流 RC4（跨多值保持密钥流状态）──────────────────────
-// analysis doc：多个值共用一个 RC4 密钥流（skip 1024 后连续推进）
-// 上面的 rc4Crypt 是无状态的（每次 KSA+skip），连续流需保留状态
-
-interface Rc4State {
-  s: number[]
-  i: number
-  j: number
-}
-
-function createRc4State(key: Uint8Array, skip = 1024): Rc4State {
-  const s = Array.from({ length: 256 }, (_, idx) => idx)
-  let j = 0
-  for (let i = 0; i < 256; i++) {
-    j = (j + s[i]! + key[i % key.length]!) & 0xff
-    const tmp = s[i]!
-    s[i] = s[j]!
-    s[j] = tmp
-  }
-  let i = 0
-  j = 0
-  for (let k = 0; k < skip; k++) {
-    i = (i + 1) & 0xff
-    j = (j + s[i]!) & 0xff
-    const tmp = s[i]!
-    s[i] = s[j]!
-    s[j] = tmp
-  }
-  return { s, i, j }
-}
-
-function rc4CryptContinue(state: Rc4State, data: Uint8Array): Uint8Array {
-  const result = new Uint8Array(data.length)
-  for (let idx = 0; idx < data.length; idx++) {
-    state.i = (state.i + 1) & 0xff
-    state.j = (state.j + state.s[state.i]!) & 0xff
-    const tmp = state.s[state.i]!
-    state.s[state.i] = state.s[state.j]!
-    state.s[state.j] = tmp
-    result[idx] = data[idx]! ^ state.s[(state.s[state.i]! + state.s[state.j]!) & 0xff]!
-  }
-  return result
-}
+// 连续流实现在 buildEncryptedParams 内部内联完成（不依赖类/状态对象）
 
 /**
  * 解密响应：响应用请求时的同一 _nonce 派生 signedNonce，RC4 解密

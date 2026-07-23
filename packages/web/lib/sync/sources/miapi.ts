@@ -109,7 +109,7 @@ async function encryptedHealthGet(
     url.searchParams.set(k, v)
   }
 
-  syncDebug('加密请求', endpoint, 'nonce?', !!enc._nonce, 'signature?', !!enc.signature)
+  syncDebug('加密请求', endpoint, 'cUserId:', token.c_user_id?.slice(0,10)+'...', 'serviceToken:', token.service_token?.slice(0,10)+'...', 'params:', Object.keys(enc).join(','))
 
   const resp = await fetch(url.toString(), {
     method: 'GET',
@@ -125,9 +125,11 @@ async function encryptedHealthGet(
   }
 
   const text = await resp.text()
+  syncDebug('响应 status:', resp.status, 'body前100:', text.slice(0, 100))
   // 响应解密（可能带 &&&START&&& 前缀，decryptResponse 内部处理）
   try {
-    const decrypted = decryptResponse(token.ssecurity, enc._nonce, text)
+    const decrypted = decryptResponse(token.ssecurity, enc._nonce, text) as Record<string, unknown>
+    syncDebug('解密结果 code:', (decrypted as any)?.code, 'keys:', Object.keys(decrypted as any).slice(0, 5), 'result_keys:', Object.keys((decrypted as any)?.result || {}))
     return decrypted
   } catch (e) {
     // 解密失败时 fallback 尝试明文 JSON（个别端点可能不加密）
@@ -165,7 +167,7 @@ async function getAggregatedData(
   key: string,
   startTimeSec: number,
   endTimeSec: number,
-  limit = 2000,
+  limit = 100,
 ): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
   const resp = await encryptedHealthGet(token, 'data/get_aggregated_fitness_data_by_time', {
     relative_uid: 0,
@@ -217,7 +219,7 @@ async function getFitnessData(
   key: string,
   startTimeSec: number,
   endTimeSec: number,
-  limit = 2000,
+  limit = 100,
 ): Promise<Array<{ time: number; value: string; [k: string]: unknown }>> {
   const resp = await encryptedHealthGet(token, 'data/get_fitness_data_by_time', {
     relative_uid: 0,
@@ -249,6 +251,7 @@ async function step1PreLogin(deviceId: string): Promise<{ sign: string; qs: stri
   })
 
   const text = await resp.text()
+  syncDebug('响应 status:', resp.status, 'body前100:', text.slice(0, 100))
   const body = parseMiResponse(text)
 
   // 小米 _json 模式下字段名带下划线前缀（_sign），兼容两种形态
@@ -307,6 +310,7 @@ async function step2LoginByPassword(
 
   // 解析错误
   const text = await resp.text()
+  syncDebug('响应 status:', resp.status, 'body前100:', text.slice(0, 100))
   const body = parseMiResponse(text)
 
   if (body.notificationUrl) {
@@ -432,6 +436,7 @@ export async function getQrCode(): Promise<{ qrImageUrl: string; loginUrl: strin
   })
 
   const text = await resp.text()
+  syncDebug('响应 status:', resp.status, 'body前100:', text.slice(0, 100))
   const data = parseMiResponse(text)
 
   if (!data.qr || !data.lp) {
@@ -462,6 +467,7 @@ export async function waitForQrScan(longPollingUrl: string): Promise<MiApiToken>
   })
 
   const text = await resp.text()
+  syncDebug('响应 status:', resp.status, 'body前100:', text.slice(0, 100))
   const data = parseMiResponse(text)
 
   if (data.code !== 0 && data.result !== 0) {
@@ -668,7 +674,8 @@ export class MiApiSource implements SyncSource {
       device_id: String(token.device_id || generateDeviceId()),
     }
 
-    if (!miToken.service_token || !miToken.c_user_id) {
+    syncDebug("miToken ssecurity:", miToken.ssecurity?.slice(0,10)+"...", "len:", miToken.ssecurity?.length)
+  if (!miToken.service_token || !miToken.c_user_id) {
       return {
         success: false,
         syncedRecords: { exercise: 0, sleep: 0, weight: 0, diet: 0 },
@@ -684,6 +691,7 @@ export class MiApiSource implements SyncSource {
     const startDate = options.startDate || new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000)
     const startTimeSec = Math.floor(startDate.getTime() / 1000)
     const endTimeSec = Math.floor(endDate.getTime() / 1000)
+    syncDebug('时间范围:', new Date(startTimeSec*1000).toISOString(), '→', new Date(endTimeSec*1000).toISOString())
 
     const { default: prisma } = await import('@/lib/prisma')
     const { encryptToken, isSyncEncryptionAvailable } = await import('@/lib/sync/crypto')
