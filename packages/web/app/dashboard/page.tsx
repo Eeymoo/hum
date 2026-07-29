@@ -68,6 +68,7 @@ export default async function DashboardPage() {
   const { userId, readOnly: isReadOnly } = result
 
   const t = await getTranslations('dashboard')
+  const tc = await getTranslations('common')
   const { latestWeight, latestSleep, todayExercises, todayDiets } = await getTodayData(userId)
 
   const totalExerciseDuration = todayExercises.reduce((sum: number, e: { duration: number }) => sum + e.duration, 0)
@@ -84,9 +85,16 @@ export default async function DashboardPage() {
             <dd className="text-lg font-medium text-gray-900">
               {latestWeight ? `${latestWeight.weight} kg` : t('noData')}
             </dd>
-            {latestWeight?.bodyFat && (
-              <dd className="text-sm text-gray-500">BF: {latestWeight.bodyFat}%</dd>
-            )}
+            <dd className="flex items-center gap-2 mt-1">
+              {latestWeight?.bodyFat && (
+                <span className="text-sm text-gray-500">BF: {latestWeight.bodyFat}%</span>
+              )}
+              {latestWeight?.sourceId && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  {latestWeight.sourceId.startsWith('miapi') ? tc('sourceXiaomi') : tc('sourceSynced')}
+                </span>
+              )}
+            </dd>
           </dl>
         </Card>
 
@@ -96,9 +104,16 @@ export default async function DashboardPage() {
             <dd className="text-lg font-medium text-gray-900">
               {latestSleep ? `${latestSleep.duration}h` : t('noData')}
             </dd>
-            {latestSleep && (
-              <dd className="text-sm text-gray-500">{t('qualityLabel') || 'Quality'}: {latestSleep.quality}/10</dd>
-            )}
+            <dd className="flex items-center gap-2 mt-1">
+              {latestSleep && (
+                <span className="text-sm text-gray-500">{t('qualityLabel') || 'Quality'}: {latestSleep.quality}/10</span>
+              )}
+              {latestSleep?.sourceId && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  {latestSleep.sourceId.startsWith('miapi') ? tc('sourceXiaomi') : tc('sourceSynced')}
+                </span>
+              )}
+            </dd>
           </dl>
         </Card>
 

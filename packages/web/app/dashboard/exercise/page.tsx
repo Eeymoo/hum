@@ -10,6 +10,7 @@ import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 
 interface TimeRange {
   last?: string
@@ -22,10 +23,11 @@ interface ExerciseRecord {
   type: string
   duration: number
   caloriesBurned?: number
-  activities: Array<{ name: string }>
+  activities: Array<{ name: string }> | Record<string, any>
   feeling?: number
   date: string
   extraData?: any
+  sourceId?: string | null
 }
 
 interface StatsData {
@@ -355,8 +357,13 @@ export default function ExercisePage() {
               <Link href={`/dashboard/exercise/${exercise.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div>
-                    <div className="text-lg font-medium text-gray-900 capitalize">{t(exercise.type)}</div>
-                    <div className="text-sm text-gray-500">{exercise.duration} {t('min')}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-lg font-medium text-gray-900 capitalize">{t(exercise.type)}</div>
+                      <SourceBadge sourceId={exercise.sourceId} />
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {exercise.sourceId && exercise.duration === 0 ? t('dailySummary') : `${exercise.duration} ${t('min')}`}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

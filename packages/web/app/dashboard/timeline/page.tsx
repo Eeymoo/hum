@@ -7,6 +7,7 @@ import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 import Pagination from '@/app/components/Pagination'
 
 interface TimeRange {
@@ -25,6 +26,7 @@ interface TimelineItem {
 export default function TimelinePage() {
   const t = useTranslations('timeline')
   const tc = useTranslations('common')
+  const te = useTranslations('exercise')
   const { formatDateTime } = useTimezone()
   const readOnlyFetch = useReadOnlyFetch()
   const [items, setItems] = useState<TimelineItem[]>([])
@@ -136,10 +138,13 @@ export default function TimelinePage() {
             <li key={`${item.type}-${item.id}`} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
               <Link href={`${detailPaths[item.type]}/${item.id}`} className="flex items-start">
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 capitalize mb-1">{t(item.type)}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="text-sm text-gray-500 capitalize">{t(item.type)}</div>
+                    <SourceBadge sourceId={item.data.sourceId} />
+                  </div>
                   <div className="text-sm text-gray-900">
                     {item.type === 'weight' && `${item.data.weight} kg`}
-                    {item.type === 'exercise' && `${item.data.duration} min ${item.data.type}`}
+                    {item.type === 'exercise' && `${item.data.sourceId && item.data.duration === 0 ? te('dailySummary') : `${item.data.duration} min`} ${te(item.data.type) || item.data.type}`}
                     {item.type === 'diet' && `${item.data.calories || 0} kcal (${item.data.mealType})`}
                     {item.type === 'sleep' && `${item.data.duration}h, ${t('qualityLabel') || 'Quality'}: ${item.data.quality}/10`}
                     {item.type === 'record' && item.data.type}

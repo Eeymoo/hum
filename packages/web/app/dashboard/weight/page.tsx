@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 import Pagination from '@/app/components/Pagination'
 import WeightCalendarHeatmap from '@/app/components/WeightCalendarHeatmap'
 import WeightCalendarExplanation from '@/app/components/WeightCalendarExplanation'
@@ -25,6 +26,7 @@ interface WeightRecord {
   bodyFat?: number
   date: string
   extraData?: any
+  sourceId?: string | null
 }
 
 interface StatsData {
@@ -332,7 +334,10 @@ export default function WeightPage() {
             <li key={weight.id} className="px-6 py-4 hover:bg-gray-50 cursor-pointer">
               <Link href={`/dashboard/weight/${weight.id}`} className="flex items-center justify-between">
                 <div>
-                  <div className="text-lg font-medium text-gray-900">{weight.weight} kg</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg font-medium text-gray-900">{weight.weight} kg</div>
+                    <SourceBadge sourceId={weight.sourceId} />
+                  </div>
                   <div className="text-sm text-gray-500">{formatDateTime(weight.date)}</div>
                 </div>
                 <div className="flex items-center gap-4">

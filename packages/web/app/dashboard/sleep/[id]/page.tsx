@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
@@ -22,6 +23,7 @@ interface SleepDetail {
   note?: string | null
   attachments?: Array<{ filename: string; originalName?: string }>
   extraData?: any
+  sourceId?: string | null
   date: string
   createdAt: string
   updatedAt: string
@@ -137,7 +139,10 @@ export default function SleepDetailPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('detailTitle')}</h1>
-        <span className="text-sm text-gray-500">{formatDateTime(data.date)}</span>
+        <div className="flex items-center gap-3">
+          <SourceBadge sourceId={data.sourceId} />
+          <span className="text-sm text-gray-500">{formatDateTime(data.date)}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

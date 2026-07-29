@@ -12,7 +12,9 @@
     "copy": "Copy",
     "created": "Created",
     "lastUsed": "Last used",
-    "back": "Back"
+    "back": "Back",
+    "sourceXiaomi": "Mi",
+    "sourceSynced": "Synced"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -170,7 +172,15 @@
     "note": "Note",
     "attachments": "Attachments",
     "extraData": "Extra Data",
-    "updated": "Updated"
+    "updated": "Updated",
+    "steps": "Steps",
+    "heart_rate": "Heart Rate",
+    "calories": "Calories",
+    "spo2": "SpO2",
+    "valid_stand": "Stand",
+    "intensity": "Intensity",
+    "stress": "Stress",
+    "dailySummary": "Daily Summary"
   },
   "diet": {
     "title": "Diet Tracking",

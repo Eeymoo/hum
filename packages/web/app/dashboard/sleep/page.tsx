@@ -7,6 +7,7 @@ import Link from 'next/link'
 import TimeRangeSelector from '@/app/components/TimeRangeSelector'
 import Pagination from '@/app/components/Pagination'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 import SleepConsistencyCalendar from '@/app/components/SleepConsistencyCalendar'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
@@ -28,6 +29,7 @@ interface SleepRecord {
   remSleep?: number
   date: string
   extraData?: any
+  sourceId?: string | null
 }
 
 interface StatsData {
@@ -374,7 +376,10 @@ export default function SleepPage() {
               <Link href={`/dashboard/sleep/${sleep.id}`} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div>
-                    <div className="text-lg font-medium text-gray-900">{sleep.duration}h</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-lg font-medium text-gray-900">{sleep.duration}h</div>
+                      <SourceBadge sourceId={sleep.sourceId} />
+                    </div>
                     <div className="text-sm text-gray-500">{sleep.bedTime} - {sleep.wakeTime}</div>
                   </div>
                 </div>

@@ -12,7 +12,9 @@
     "copy": "复制",
     "created": "创建于",
     "lastUsed": "最后使用",
-    "back": "返回"
+    "back": "返回",
+    "sourceXiaomi": "小米",
+    "sourceSynced": "同步"
   },
   "nav": {
     "dashboard": "概览",
@@ -170,7 +172,15 @@
     "note": "备注",
     "attachments": "附件",
     "extraData": "额外数据",
-    "updated": "更新于"
+    "updated": "更新于",
+    "steps": "步数",
+    "heart_rate": "心率",
+    "calories": "卡路里",
+    "spo2": "血氧",
+    "valid_stand": "站立",
+    "intensity": "中高强度",
+    "stress": "压力",
+    "dailySummary": "每日汇总"
   },
   "diet": {
     "title": "饮食追踪",

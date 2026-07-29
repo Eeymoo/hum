@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useTimezone } from '@/app/components/TimezoneProvider'
 import Card from '@/app/components/Card'
+import SourceBadge from '@/app/components/SourceBadge'
 import { useReadOnly } from '@/app/components/ReadOnlyProvider'
 import { useReadOnlyFetch } from '@/app/components/useReadOnlyFetch'
 
@@ -14,7 +15,7 @@ interface ExerciseDetail {
   type: string
   duration: number
   caloriesBurned?: number | null
-  activities?: Array<{ name: string; [key: string]: any }>
+  activities?: Array<{ name: string; [key: string]: any }> | Record<string, any>
   heartRateAvg?: number | null
   heartRateMax?: number | null
   feeling?: number | null
@@ -22,6 +23,7 @@ interface ExerciseDetail {
   note?: string | null
   attachments?: Array<{ filename: string; originalName?: string }>
   extraData?: any
+  sourceId?: string | null
   date: string
   createdAt: string
   updatedAt: string
@@ -136,7 +138,10 @@ export default function ExerciseDetailPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('detailTitle')}</h1>
-        <span className="text-sm text-gray-500">{formatDateTime(data.date)}</span>
+        <div className="flex items-center gap-3">
+          <SourceBadge sourceId={data.sourceId} />
+          <span className="text-sm text-gray-500">{formatDateTime(data.date)}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -148,22 +153,38 @@ export default function ExerciseDetailPage() {
         ))}
       </div>
 
-      {data.activities && data.activities.length > 0 && (
-        <Card className="mb-6">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">{t('activities')}</h2>
-          <div className="space-y-2">
-            {data.activities.map((act, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                  {act.name}
-                </span>
-                {Object.entries(act).filter(([k]) => k !== 'name').map(([k, v]) => (
-                  <span key={k} className="text-sm text-gray-500">{k}: {String(v)}</span>
+      {data.activities && (
+        Array.isArray(data.activities) ? (
+          data.activities.length > 0 && (
+            <Card className="mb-6">
+              <h2 className="text-sm font-medium text-gray-500 mb-2">{t('activities')}</h2>
+              <div className="space-y-2">
+                {data.activities.map((act, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                      {act.name}
+                    </span>
+                    {Object.entries(act).filter(([k]) => k !== 'name').map(([k, v]) => (
+                      <span key={k} className="text-sm text-gray-500">{k}: {String(v)}</span>
+                    ))}
+                  </div>
                 ))}
               </div>
-            ))}
-          </div>
-        </Card>
+            </Card>
+          )
+        ) : (
+          <Card className="mb-6">
+            <h2 className="text-sm font-medium text-gray-500 mb-2">{t('activities')}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {Object.entries(data.activities).map(([k, v]) => (
+                <div key={k} className="flex justify-between border-b border-gray-100 pb-1">
+                  <span className="text-gray-500 capitalize">{k}</span>
+                  <span className="font-medium">{String(v)}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )
       )}
 
       {data.note && (
